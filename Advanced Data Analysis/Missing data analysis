@@ -1,0 +1,271 @@
+---
+title: "Project 3: Missing Data and Longitudinal Analysis"
+author: "David O. Agboola"
+#date: "March 23, 2019"
+header-includes:
+    - \usepackage{setspace}\doublespacing
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\begin{center}
+\bf\large{Purpose of the Analysis}
+\end{center}
+
+In 2013, the Centers for Disease Control (CDC) estimated more than half a million US children to have lead poisoning after lowering the blood cutoff. Health officials have realized that too much lead in the blood can harm a developing brain which could lead to a lower IQ. Several clinical trials were set in motion to combat this menace. 
+
+One of these trials is for the medication - succimer (a chelating agent). An analysis will be carried out on the randomized study of succimer on lead-exposed children with blood lead levels of $20-44$ micrograms/dL. The treatment was placebo-controlled, and children were randomly assigned to either treatments. There are observed missing values in blood lead levels recorded. The method of multiple imputation will be used to resolve the missingness. Afterwards, the expected blood lead levels for each child by treatment group (that is, placebo or succimer) and time (in weeks) will be modelled.
+
+\begin{center}
+\bf\large{Description of the Data}
+\end{center}
+
+The dataset can be found in ''Treatment of Lead-exposed Children (TLC) Trial Group (2000). Safety and Efficacy of Succimer in Toddlers with Blood Lead Levels of 20-44 $\mu g/dL$. Pediatric Research, 48, 593-599''. This is courtesy of Dr. George G. Rhoads (Chair, TLC Steering Committee). The dataset was originally in ''wide'' format but was manipulated to ''long'' format for easier handling and analysis. There were four repeated measurements of blood lead levels obtained at baseline (or week 0), week 1, week 4, and week 6 on 100 children that were randomly assigned to chelating treatment with succimer or placebo. The missing data on blood lead levels were denoted by ''.'' at weeks 1, 4, and 6. However, they were set to missing under a missing at random (MAR) process. 
+
+Blood lead level was measured in micrograms/dL, time was measured in weeks (0, 1, 4, and 6), treatment groups has two categories (0=placebo and 1=succimer), and child ID is from 1 to 100. Thus, there were 100 children and 400 observations in all with 57 missing values. The method of multiple imputation will be applied to resolve the missingness. 
+
+\newpage
+\begin{center}
+\bf\large{Proposed Analysis}
+\end{center}
+
+The missing values represented by '.' will be replaced with 'NA' for easier handling. The proportion of missingness will be evaluated to check if multiple imputation will be a valid approach. Visual descriptives (like  flux plot, aggregate plot) will be used to investigate the extent of missingness. Little's test will be carried out to check if the missingness is completelty at random. If the proportion of missingness is less than $5\%$ and the missingness is not completely at random then multiple imputation will be applied.
+The imputed values will be investigated to check if they are possible values for the missing data using descriptives (both visual and non-visual) like mean and variance, overlayed density plots, overlayed strip plots, trace plots, amongst others. If the imputed values are possible values based on the above investigations, then they will replace the missing data and longitudinal analysis of this complete dataset will follow.  
+
+Hence, the conditional longitudinal random intercept model:
+$$
+Y_{it}=\beta_0+\beta_t*\text{Time} + \beta_1*\text{Treatment Group} + u_i+\epsilon_{it}
+$$
+would be used because of the interest in how the blood level of each child changes over time by the treatment group. Thus, it is assumed that the effect of time is the same among each treatment groups. 
+
+For exploratory data analysis, the dataset will be transformed from ''wide'' format to ''long'' format for easier handling and analysis. For descriptive data analysis, the spaghetti plot will show time plot with dots connected by subjects. Interaction plot will show if there is a relationship between treatment group and blood lead level at each level of time. Variogram will show the presence of auto-correlation. That is, if there is a correlation between data points separated by different time lags to investigate non-independence in the data. Correlation analysis for all pairs of time will be observed if the variogram is not informative. Mean and variance at each time will be observed to investigate average time and variability across each time lag. 
+
+Inferential analysis involves fitting the random intercept model checking if it is a good fit. We check by observing the significance of the independent variables from the Analysis of Variance Table with Satterthwaite's method, plotting the residuals versus predicted values to observe the overall variation in the model - this is good for visuals, testing for normality using the normal probability plot and Shapiro-Wilk's normality test, and investigating the auto-correlation using variogram or correlation analysis to check non-independence in the data. So, if the model suggests a good fit, then we can trust the result it gives. We observe if the independent variables are statistically significant and use their estimates (the $\beta's$) for specific interpretations. 
+
+\newpage
+\begin{center} 
+\bf\large{Analysis Results}
+\end{center}
+
+The proportion of missingness is less than $5\%$ (as shown below), so applying multiple imputation is reasonable. Using descriptives, it was observed that missingness is only found in blood lead level as shown in the aggregate plot below (See Figure 1). Other variables were observed to have outflux of $1$ (See Appendix) which implies that they can provide information for the missingness in blood lead levels.
+
+```{r include=FALSE,echo=TRUE,error=FALSE,message=FALSE,warning=FALSE}
+library(lme4)
+library(lmerTest)
+library(ggplot2)
+library(joineR)
+library(s20x)
+library(VIM)
+library(mice)
+setwd("/Users/agboo/OneDrive - University of Northern Colorado/Spring 2019/SRM 611/Project")
+BLData = read.table('LeadExposedChildren.txt',header=FALSE)
+colnames(BLData) = c("ChildID","TreatGroup","Week0","Week1","Week4","Week6")
+BLD.long=reshape(BLData,direction="long",varying=3:6, sep="")
+#To convert the data from wide to long format
+BLD.long$Blood.LL=ifelse(BLD.long$Week==".","NA",BLD.long$Week)
+#naming missing values
+BLD.long$TreatGroup=as.factor(BLD.long$TreatGroup)
+BLD.long$time=as.factor(BLD.long$time)
+BLD.long$Blood.LL=as.numeric(BLD.long$Blood.LL)
+BLD.L=BLD.long[,c(1,2,3,6)] #selecting the required columns
+BLL<-BLD.L[-319,] #to remove the outlier 63.9dL
+summary(BLL)
+BLL_imp <- mice(BLL, m=5)
+imp_val = BLL_imp$imp
+Blood.LL_imp <- imp_val$Blood.LL
+BLL_IMP <- complete(BLL_imp,5) #replacing missing values with imputed values
+```
+
+```{r echo=FALSE}
+(proportionMissing = sum(is.na(BLL))/prod(dim(BLL)))
+```
+
+
+```{r echo=FALSE,fig.width=4,fig.height=4,fig.align='center',fig.cap="Aggregate plot"}
+aggr(BLL)
+```
+The p-value from Little's test is $<0.001$ which implies that the missingness was not completely at random. Thus, multiple imputation was applied. The density and trace plots below (See Figures 3 and 4) suggest that the imputed values are possible values for the missing data. Hence, they were replaced with the missing data. Then the conditional longitudinal analysis was carried out on the complete dataset.
+\newpage
+```{r Mul Imp, echo=TRUE,fig.width=5,fig.height=5,warning=FALSE,fig.align='center',fig.cap="Density plots"}
+densityplot(BLL_imp)
+```
+
+```{r echo=F,fig.cap="Trace plots"}
+knitr::include_graphics("Project3_plot.png",dpi = 20)
+```
+From the interaction plot, it was observed that there is a relationship between treatment group and blood lead level at each level of time.  From the spaghetti plot, changes in blood lead level at each level of time for each child was observed. The variogram of the model residuals (See Figure 4) shows a flat line which implies that there is a similar auto-correlation regardless of time lag.
+
+```{r VG, echo=FALSE,tidy=TRUE,fig.width=4,fig.height=4,fig.align='center',fig.cap="Variogram"}
+residuals = lm(Blood.LL~TreatGroup,data=BLL_IMP)$residuals
+ChildVG = variogram(BLL_IMP$ChildID,as.numeric(BLL_IMP$time),residuals)
+plot(ChildVG)
+```
+
+From the correlation analysis, a fairly strong correlation was observed among all pairs of time. This suggests a strong auto-correlation in different instances of time. This implies that there is non-independence in the data. Considering the mean and variance at each time, it was observed that the mean blood lead level for the children reduced after the one week while the variance increased after one week. This suggests a difference in the blood level for the two treatment groups over time. Further investigation showed that the group that received the succimer medication had a much lower mean blood lead level than the group that received the placebo. Also, there was more variability in the blood lead level of the group that received the succimer treatment than the group that received only placebo.
+
+From the Analysis of Variance table with Satterthwaite's method, the independent variables were statistically significant at $95\%$ confidence level. Plotting the residuals versus predicted values showed a slightly appropriate variance-covariance structure in the model. The normal probability plot showed a slight departure at the tails and failed the normality test due to a very small p-value. Hence there is a violation of normality of the errors and random effects. A potential outlier was observed in both plots. Further exploratory analysis revealed that a blood lead level of $63.9\mu g$ was recorded. This is an outlier since the test was carried out on children with blood lead levels between $20-44\mu g$. Hence, this observation was removed. Refitting the model maintains a statistically significant independent variable. The normality test now showed normality with a p-value larger than $0.05$ implying that the errors and random effects are normally distributed. The residuals versus predicted values plot now shows a more appropriate variance-covariance structure in the model. The scaled residuals were between -3 and 3 which suggests the model is a good fit for the data.
+
+Variable     |   Estimate    | P-Value
+------------ | ------------- |--------------
+Treatment Group 1   | -6.65  | <0.001
+Week 1      | -7.24       | <0.001
+Week 4  | -6.65  | <0.001
+Week 6 | -6.13  | <0.001
+
+From the results shown in the table above, it was observed that the blood lead level for each child given the succimer medication is expected to reduce over time. More specifically, expect the blood lead level for each child to reduce by $7.24\mu g$ after one week, $6.65\mu g$ after four weeks, and $6.13\mu g$ after six weeks. Since it was observed that the model is a good fit for the data, this implies that we can trust the results.
+
+\begin{center}
+\textbf{Conclusions}
+\end{center}
+
+The purpose of the analysis is to first resolve the missingness in the data and then model the expected blood lead levels for each child by treatment group (that is, placebo or succimer) and time (in weeks).
+The missingness was resolved by a method called multiple imputation. Hence, following from the results above, it can be concluded that each child assigned to the succimer treatment group had a reduction in their blood lead level over time. So, for an individual child, expect the blood lead level to reduce by around $7.1\mu g$ after the first week, $6.45\mu g$ after the fourth week, and $5.29\mu g$ after the sixth week. This suggests that the succimer medication is most effective within one week of usage. 
+
+
+\newpage
+
+\begin{center}
+\bf\large{APPENDIX}
+\end{center}
+
+
+#### R CODE:
+
+```{r echo=TRUE,tidy=TRUE,warning=FALSE}
+setwd("/Users/agboo/OneDrive - University of Northern Colorado/Spring 2019/SRM 611/Project")
+BLData = read.table('LeadExposedChildren.txt',header=FALSE)
+colnames(BLData) = c("ChildID","TreatGroup","Week0","Week1","Week4","Week6")
+BLD.long=reshape(BLData,direction="long",varying=3:6, sep="")
+#To convert the data from wide to long format
+BLD.long$Blood.LL=ifelse(BLD.long$Week==".","NA",BLD.long$Week)
+#naming missing values
+BLD.long$TreatGroup=as.factor(BLD.long$TreatGroup)
+BLD.long$time=as.factor(BLD.long$time)
+BLD.long$Blood.LL=as.numeric(BLD.long$Blood.LL)
+BLD.L=BLD.long[,c(1,2,3,6)] #selecting the required columns
+BLL<-BLD.L[-319,] #to remove the outlier 63.9dL
+summary(BLL)
+```
+
+```{r echo=TRUE,error=FALSE,message=FALSE,warning=FALSE}
+library(lme4)
+library(lmerTest)
+library(ggplot2)
+library(joineR)
+library(s20x)
+library(VIM)
+library(mice)
+```
+
+#### Missingness: Non-Visual Descriptive
+```{r echo=TRUE}
+(proportionMissing = sum(is.na(BLL))/prod(dim(BLL)))
+
+flux(BLL)
+```
+
+#### Missingness: Visual Descriptives
+```{r echo=TRUE,fig.width=4,fig.height=4,fig.align='center'}
+matrixplot(BLL)
+
+fluxplot(BLL)
+
+aggr(BLL)
+```
+
+#### Test for Missingness: Little's Test
+```{r echo=TRUE,error=FALSE,message=FALSE,warning=FALSE}
+library('BaylorEdPsych')
+library('mvnmle')
+littleTest = LittleMCAR(BLL)
+littleTest$p.value
+```
+
+#### Multiple Imputation and descriptives
+```{r echo=TRUE,results='hide'}
+set.seed(123)
+BLL_imp <- mice(BLL, m=5)
+```
+
+```{r Multiple Imputation, echo=TRUE,fig.width=4,fig.height=4,warning=FALSE,fig.align='center',results='hide'}
+imp_val = BLL_imp$imp
+Blood.LL_imp <- imp_val$Blood.LL
+sapply(Blood.LL_imp,mean)
+mean(BLL$Blood.LL,na.rm=TRUE)
+sapply(Blood.LL_imp,var)
+var(BLL$Blood.LL,na.rm=TRUE)
+```
+
+\newpage
+```{r M Imp, echo=TRUE,fig.width=4,fig.height=4,warning=FALSE,fig.align='center',results='hide'}
+plot(BLL_imp)
+
+ggplot(melt(as.data.frame(Blood.LL_imp)), aes(value, fill=variable)) + 
+  geom_histogram(position="dodge")
+```
+\newpage
+```{r MI, echo=TRUE,fig.width=4,fig.height=4,warning=FALSE,fig.align='center',results='hide'}
+densityplot(BLL_imp)
+stripplot(BLL_imp)
+BLL_IMP <- complete(BLL_imp,5) #replacing missing values with imputed values
+summary(BLL_IMP)
+```
+
+#### Conditional Longitudinal Analysis: Descriptives and Plots
+```{r Spaghetti, echo=TRUE,tidy=TRUE,fig.width=4,fig.height=4,fig.align='center'}
+
+#Spaghetti Plot
+interaction.plot(x.factor=as.factor(BLL_IMP$time),trace.factor=
+as.factor(BLL_IMP$ChildID),response=BLL_IMP$Blood.LL,
+fun=function(x)mean(x,na.rm=TRUE))
+
+#Interaction Plot
+interaction.plot(x.factor=as.factor(BLL_IMP$time),trace.factor=as.factor(BLL_IMP$TreatGroup),response=BLL_IMP$Blood.LL,fun=function(x)mean(x,na.rm=TRUE))
+
+#Variogram
+residuals = lm(Blood.LL~TreatGroup,data=BLL_IMP)$residuals
+ChildVG = variogram(BLL_IMP$ChildID,as.numeric(BLL_IMP$time),residuals)
+plot(ChildVG)
+
+#MEANS AND VARIANCES BY TIME
+aggregate(Blood.LL~time,data=BLL_IMP,FUN=function(x)mean(x,na.rm=TRUE))
+aggregate(Blood.LL~time,data=BLL_IMP,FUN=function(x)var(x,na.rm=TRUE))
+```
+\newpage
+```{r Spa, echo=TRUE,tidy=TRUE,fig.width=4,fig.height=4,fig.align='center'}
+#MEANS AND VARIANCES BY TREATMENT GROUP AND TIME 
+aggregate(Blood.LL~TreatGroup+time,data=BLL_IMP,FUN=function(x)mean(x,na.rm=TRUE))
+aggregate(Blood.LL~TreatGroup+time,data=BLL_IMP,FUN=function(x)var(x,na.rm=TRUE))
+
+#RANDOM INTERCEPT MODEL
+RIModel = lmer(Blood.LL~as.factor(TreatGroup)+as.factor(time)+(1|ChildID),data=BLL_IMP,REML=TRUE)
+
+anova(RIModel)
+
+#RESIDUAL DIAGNOSTICS
+RIResid = residuals(RIModel)
+RIPred = predict(RIModel)
+
+#RESIDUALS VERSUS PREDICTED VALUES
+qplot(RIPred,RIResid)
+```
+\newpage
+```{r Spgheti, echo=TRUE,tidy=TRUE,fig.width=4,fig.height=4,fig.align='center'}
+#NORMAL PROBABILITY PLOT AND TEST
+qqnorm(RIResid)
+qqline(RIResid)
+
+shapiro.test(RIResid)
+```
+\newpage
+```{r vag, echo=TRUE,tidy=TRUE,fig.width=4,fig.height=4,fig.align='center'}
+
+VG = variogram(BLL_IMP$ChildID,as.numeric(BLL_IMP$time),RIResid)
+plot(VG)
+
+summary(RIModel)
+
+```
