@@ -1,0 +1,80 @@
+setwd("C:\\Users\\agboo\\OneDrive - University of Northern Colorado\\Spring 2019\\SRM 611\\Project")
+
+data <- read.csv("day.csv",header=T,sep=",")
+#attach(data)
+head(data)
+
+
+hist(data$cnt,main="Histogram of number of bikes rented",xlab = "total number of bikes")
+boxplot(data$cnt,main="Boxplot for number of bikes rented",ylab="total number of bikes");summary(data$temp)
+plot(density(data$cnt),main="Density plot for bikes rented")
+summary(data$cnt)
+
+sum(is.na(data));sum(is.null(data)) #check if we have missing values
+sum(duplicated(data))
+
+data$TEMPref<-data$temp * 41 #converted normalized temperature in Celsius
+data$TEMPfel<-data$atemp*50 #cOnverted normalized feeling temperature in Celsius 
+data$Humid<-data$hum*100 #converted normalized humidity
+data$WINDSPEED<- data$windspeed*67 #converted normalized windspeed
+
+hist(data$TEMPfel);summary(data$TEMPfel);sd(data$TEMPfel)
+hist(data$weathersit);summary(data$weathersit);sd(data$weathersit)
+hist(data$holiday);summary(data$holiday);sd(data$holiday)
+hist(data$WINDSPEED,breaks = 20);summary(data$WINDSPEED);sd(data$WINDSPEED)
+hist(data$Humid);summary(data$Humid);sd(data$Humid)
+
+a<-rpois(700,0.3)
+
+set.seed(123)
+TF<-rnorm(731,23.718,8.148059)
+WeaS<-sample(1:3,731,replace=T,prob=c(0.6,0.3,0.1))
+Hol<-sample(0:1,731,replace=T,prob = c(0.9,0.1))
+WS <- rsn(731, 12.763, 12.125, 5.192357)
+Hum <- rsn(731, xi=62.67, omega=14.24291, alpha = 0, tau=62.79)
+CT <- rnbinom(731, mu = 4504, size = 6.868)
+
+m = glm.nb(x~grp)
+anova(m)[,"Pr(>Chi)"][3]
+
+mean(p<0.05)
+
+
+
+calcPower = function(n1,n2,mu1,mu2,size1,size2,rep=1000) {
+  grp = factor(rep(1:2, c(n1,n2)))
+  y = matrix(
+    c(
+      rnbinom(rep*n1, size=100, mu=mu1),
+      rnbinom(rep*n2, size=100, mu=mu2) ),
+    ncol=n1+n2, nrow=rep, byrow=FALSE )
+  p = apply(y, 1, function(x) {
+    m = glm.nb(x~grp)
+    anova(m)[,"Pr(>Chi)"][2]
+  })
+  mean(p<0.05)
+}
+# getting the power for a difference in mu:
+calcPower(10,10,10,15,100,100)
+
+# getting the power for a series of
+sapply (13:16, function(mu2) calcPower(10,10,10,mu2,100,100))
+
+library(s20x)
+pairs20x(data) #check correlation among variables
+
+# NEGATIVE BINOMIAL MODEL #
+library("MASS")
+
+negativeBinomialReg = glm.nb(cnt~weathersit+holiday+TEMPfel+Humid+WINDSPEED,data=data)
+summary(negativeBinomialReg)
+exp(summary(negativeBinomialReg)$coefficients[,1])
+anova(negativeBinomialReg)
+
+# DEVIANCE RESIDUALS #
+nbDevResid = summary(negativeBinomialReg)$deviance.resid
+summary(nbDevResid)
+
+
+library("ggplot2")
+qplot(negativeBinomialReg$y,nbDevResid, xlab="Fitted count",ylab="Deviance Residual",main = "Plot of Deviance Residuals")
