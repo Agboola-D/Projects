@@ -1,4 +1,4 @@
-Simulation study to compare neighborhood-based cross fittting (new method) with repeated sample splitting (existing method) under different scenarios.
+Simulation study to compare neighborhood-based cross fittting (proposed method excluded from the code) with repeated sample splitting (existing method) under different scenarios.
 Causal inference is the goal using different machine learning techniques
 Sample size (n) and variables (p) are varied with a treatment variable included - p >> n
 Various covariance structures and sparsity assumptions are considered 
