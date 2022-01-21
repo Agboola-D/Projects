@@ -1,3 +1,5 @@
 Simulation study to compare neighborhood-based cross fittting (new method) with repeated sample splitting (existing method) under different scenarios.
 Sample size (n) and variables (p) are varied with a treatment variable included - p >> n
 Various covariance structures and sparsity assumptions are considered 
+
+The image is a simulation scenario comparing my proposed method with existing methods
