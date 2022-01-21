@@ -386,3 +386,274 @@ qplot(mBLL$time,RIResid)
 
 shapiro.test(RIResid)
 ```
+
+
+
+\newpage
+
+## Purpose of the Analysis:
+In 2013, the Centers for Disease Control (CDC) estimated more than half a million US children to have lead poisoning after lowering the blood cutoff. Health officials have realized that too much lead in the blood can harm a developing brain which could lead to a lower IQ. Several clinical trials were set in motion to combat this menace. 
+
+One of these trials is for the medication - succimer (a chelating agent). An analysis will be carried out on the randomized study of succimer on lead-exposed children (both males and females) with blood lead levels of $20-44$ micrograms/dL. The treatment was placebo-controlled, and children were randomly assigned to either treatments.
+
+It is of interest to determine whether expected blood lead levels differ between males and females and whether they differ by treatment group.
+
+
+## Description of the Data:
+The dataset can be found in "Treatment of Lead-exposed Children (TLC) Trial Group. (2000). Safety and Efficacy of Succimer in Toddlers with Blood Lead Levels of $20-44 \mu g/dL$. Pediatric Research, 48, 593-599". This is courtesy of Dr. George G. Rhoads (Chair, TLC Steering Committee). There were four repeated measurements of blood lead levels obtained at baseline (or week 0), week 1, week 4, and week 6 on 100 children that were randomly assigned to chelating treatment with succimer or placebo. The missing data on blood lead levels were denoted by "." at weeks 1, 4, and 6. Please note that sex as a variable was randomly assigned by me for the purpose of this study. Though this type of data does not necessarily need marginal estimation technique but was applied for the purpose of this project. <!-- However, they were set to missing under a missing at random (MAR) process.  -->
+Blood lead level was measured in micrograms/dL, time was measured in weeks (0, 1, 4, and 6), treatment groups has two categories (0=placebo and 1=succimer), sex has two categories (0=male and 1=female), and child ID is from 1 to 100. Thus, there were 100 children and 400 observations in all with 57 missing values. 
+
+
+## Proposed Analysis:
+For descriptive data analysis, mean and variances of the blood lead level will be considered at each time. This will be supported with visuals using the time plot and spaghetti plot. Interaction plot will show if there is a similar pattern of mean blood lead level between sex using time and sex as the two classifications. The residual scatter plot matrix will be generated to observe the presence of auto-correlation among subject's mean blood level across time. This is to check if there is a correlation between data points separated by different time lags to investigate non-independence in the data. These information will also be used to decide the working correlation structure that describes the nature of the data. 
+
+Inferential analysis involves fitting a gamma regression model for the response (blood lead level) because it is continuous and only positive, with sex, time and treatment group as predictors. Then the appropriate working correlation structure will be evaluated and selected throught the analysis by comparing three possible options - autoregressive, unstructured and independent. The exploratory analysis suggests autoregressive, but the three will be compared due to the time-independent covariate in the data. The generalized estimating equations will be used as the marginal estimation technique. We check the fit of the three candidate models by comparing their respective QICs and residual plots. The residual plots are needed to observe the overall variation in the model - this is good for visuals. So, if the model suggests a good fit, then we can trust the result it gives. We observe if the independent variables are statistically significant and use their estimates (the $\beta's$) for specific interpretations.
+
+Thus, an appropriate gamma regression as the mean model is:
+
+$$
+\ln{\mu_i}=\beta_0+\beta_1(time)_{it}+\beta_2(Sex)_i+ \beta_3(TrtGroup)_i, ~~~~i = 1,2,\dots 100, ~~~~~~~t = 1,2,3,4
+$$
+where $\mu_i$ represent the average blood lead levels for subject $i$ at time $t$ and $\beta_k$ represent the regression slopes.
+
+## Analysis Results:
+```{r, include=FALSE,warning=FALSE,out.width='70%'}
+# GEE ESTIMATION OF LONGITUDINAL LOGISTIC REGRESSION OF AVG BLOOD LEAD LEVEL #
+
+
+## MODEL BLOOD LEVEL USING 	##
+##	SEX, TREATMENT GROUP	##
+
+library('ggplot2')
+library('s20x')
+library('geepack')
+library('MuMIn')
+
+
+BLData = read.table("C:\\Users\\agboo\\OneDrive - University of Northern Colorado\\Spring 2020\\Longitudinal\\Dataset\\LeadExposedChildren.txt",header=FALSE)
+colnames(BLData) = c("ChildID","TreatGroup","Week0","Week1","Week4","Week6")
+
+
+BLD.long=reshape(BLData,direction="long",varying=3:6, sep="") #To convert the data from wide to long format
+BLD.long$Blood.LL=ifelse(BLD.long$Week==".","NA",BLD.long$Week) #naming missing values
+
+BLD.long$TreatGroup=as.factor(BLD.long$TreatGroup)
+#BLD.long$time=as.factor(BLD.long$time)
+BLD.long$Blood.LL=as.numeric(BLD.long$Blood.LL)
+
+
+BLD.L=BLD.long[,c(1,2,3,6)] #selecting the required columns
+a<-as.data.frame(floor(runif(100, 0, 2)))
+a<-rbind(a,a)
+a<-rbind(a,a)
+a<-as.data.frame(a)
+colnames(a)<-c("Sex")
+BLL<- cbind(BLD.L,a)
+BLL$Sex<-as.factor(BLL$Sex)
+BLL<-BLL[-319,] #to remove the outlier 63.9dL
+
+# REMOVE RELEVANT NA'S, TO HELP WITH RESIDUAL PLOTS #
+BLL = BLL[complete.cases(BLL[,c("ChildID", "TreatGroup", "time","Blood.LL","Sex")]),]
+
+
+
+## DESCRIPTIVES AND PLOTS ##
+
+## SPAGHETTI PLOT ##
+interaction.plot(x.factor=as.factor(BLL$time),trace.factor=as.factor(BLL$ChildID),response=BLL$Blood.LL,fun=function(x)mean(x,na.rm=TRUE))
+
+
+## INTERACTION PLOT ##
+interaction.plot(x.factor=as.factor(BLL$time),trace.factor=as.factor(BLL$Sex),response=BLL$Blood.LL,fun=function(x)mean(x,na.rm=TRUE))
+
+
+## MEANS AND VARIANCES BY TIME ##
+aggregate(Blood.LL~time,data=BLL,FUN=function(x)mean(x,na.rm=TRUE))
+aggregate(Blood.LL~time,data=BLL,FUN=function(x)var(x,na.rm=TRUE))
+
+
+## MEANS AND VARIANCES BY TREATMENT GROUP AND TIME ##
+aggregate(Blood.LL~TreatGroup+time,data=BLL,FUN=function(x)mean(x,na.rm=TRUE))
+aggregate(Blood.LL~TreatGroup+time,data=BLL,FUN=function(x)var(x,na.rm=TRUE))
+
+attach(BLL)
+
+# WITH MISSING VALUES #
+BLL_matrix = matrix(0,length(unique(ChildID)),length(unique(time)))
+for(i in 1:nrow(BLL_matrix)){
+	for(j in 1:ncol(BLL_matrix)){
+		if(unique(time)[j] %in% time[ChildID==unique(ChildID)[i]]){BLL_matrix[i,j]=Blood.LL[((ChildID==unique(ChildID)[i])&(time==unique(time)[j]))]}
+		else{BLL_matrix[i,j]=NA}
+	}}
+
+
+time = BLL$time
+
+
+# VIEW DESCRIPTIVES FOR WORKING CORRELATION STRUCTURE #
+
+# SCATTERPLOT MATRIX OF RESIDUALS #
+residuals = glm(Blood.LL~as.factor(Sex)+as.factor(Sex)*as.factor(TreatGroup)+as.factor(TreatGroup),data=BLL, family = Gamma(link = "log"))$residuals
+
+residualData = as.data.frame(cbind(residuals,time,BLL$ChildID))
+rDataWide = reshape(residualData,timevar="time",idvar="V3",direction="wide")
+
+rDataOrdered = rDataWide[,c("residuals.0","residuals.1","residuals.4","residuals.6")]
+colnames(rDataOrdered) = c("time1","time2","time3","time4")
+
+
+
+
+
+# GEE ESTIMATION #
+
+# SORT FOR GEEGLM #
+BLL = BLL[order(BLL$ChildID),]
+
+
+# UNSTRUCTURED #
+GEEFHSModel_UN = geeglm(Blood.LL~time+as.factor(Sex)+as.factor(TreatGroup),data=BLL,id=ChildID,family=Gamma(link = "log"),corstr="unstructured")
+
+# AUTO-REGRESSIVE #
+GEEFHSModel_AR1 = geeglm(Blood.LL~time+as.factor(Sex)+as.factor(TreatGroup),data=BLL,id=ChildID,family=Gamma(link = "log"),corstr="ar1")
+
+# INDEPENDENCE #
+GEEFHSModel_IND = geeglm(Blood.LL~time+as.factor(Sex)+as.factor(TreatGroup),data=BLL,id=ChildID,family=Gamma(link = "log"),corstr="independence")
+
+# QIC VALUES #
+QIC(GEEFHSModel_UN)
+QIC(GEEFHSModel_AR1)
+QIC(GEEFHSModel_IND)
+
+
+# GEE MODEL RESIDUALS #
+# STANDARDIZED DEVIANCE RESIDUALS: LOOK FOR LARGE VALUES #
+summary(summary(GEEFHSModel_UN)$deviance.resid)
+summary(summary(GEEFHSModel_AR1)$deviance.resid)
+summary(summary(GEEFHSModel_IND)$deviance.resid)
+
+
+
+# AR(1) MODEL RESULTS #
+summary(GEEFHSModel_IND)
+
+# ODDS RATIOS #
+(exp(GEEFHSModel_IND$coefficients))
+
+# PREDICTION #
+predicted_values = as.data.frame(cbind(BLL,predicted=fitted(GEEFHSModel_IND)))
+
+p<-ggplot(data=BLL,aes(x=TreatGroup,y=Blood.LL)) +
+	facet_wrap(~Sex) +
+	geom_point() +
+	geom_smooth(data=predicted_values,aes(y=predicted)) +
+	ggtitle("Predicted expected value of blood lead level by treatment groupl") + 
+	xlab("Treatment Group") + 
+	ylab("Predicted Expected Value of Blood Lead Level")
+```
+
+Computing the mean blood lead level at each time shows that blood lead level drops after baseline (week 0) and slowly increases at other times. Similarly, the variation in blood lead level first increases after baseline (week 0) and drops afterwards. The time plot shows that blood lead level for the subjects generally reduced after baseline, more of the same at other times with some high blood lead level recorded at week 6. Spaghetti plot shows that most subjects have different blood lead level at the baseline. It gives a visual to what was described after computing the mean. While there is no general trend for all subjects across time; a common trend is experiencing a reduction in blood lead level after baseline and slow increase afterwards.
+
+
+```{r int, warning=FALSE,fig.cap="Interaction Plot", out.width='50%', fig.align='center'}
+## INTERACTION PLOT ##
+with(BLL,{interaction.plot(x.factor = as.factor(time), trace.factor = as.factor(Sex), response = Blood.LL,fun=function(x)mean(x,na.rm=TRUE),xlab='Time', ylab='Blood Lead Level', trace.label = "Sex",type = "b", col=c("blue","red"), pch = c(19,17), fixed = TRUE)})
+```
+
+From the interaction plot in Figure 1, we can make one clear conclusions. Both population (males and females) have similar trends of mean blood lead level across time. Though the mean blood lead level for both population are not exactly the same, they are very similar and have the same pattern. It should not be surprising if there is no significant difference in expected mean blood lead level between both population groups.
+
+
+```{r re,fig.align='center',fig.cap="Residual Scatterplots Matrix",out.width='50%'}
+pairs20x(rDataWide[,-1])
+```
+
+The residual scatterplots matrix was explored (see Figure 2) since there are only four times. It shows fairly strong associations between residuals at different times, with the association first increasing then diminishing somewhat from time lags of one time to time lags of two times. It can be concluded that there is non-independence in the data. Also, this suggests an autoregressive correlation structure for the data.
+
+Using QIC and residuals to compare the fit of candidate models, we have the results shown below:
+
+Model | QIC | Deviance Residual (Min) | Deviace Residual (Max)
+-------|----------|----------|-----------
+Independent | 25266 | -1.5 | 0.80
+Unstructured | 26350 | -1.5 | 0.79
+Autoregressive | 26886 | -1.5 | 0.75
+
+Observe that the independence model has the lowest QIC and residuals of the three compared. This could make sense because of the presence of time-independent covariate in the data. 
+
+```{r,out.width='33.3%'}
+par(mfrow=c(1,3))
+qplot(GEEFHSModel_UN$fitted.values,GEEFHSModel_UN$residuals, main = "Unstructured model")
+qplot(GEEFHSModel_AR1$fitted.values,GEEFHSModel_AR1$residuals, main = "Autoregressive model")
+qplot(GEEFHSModel_IND$fitted.values,GEEFHSModel_IND$residuals, main = "Independence model")
+```
+
+The figure above shows the plots of scaled residuals against predicted model values for each choice of working correlation structure. Observe that the independence model plot show less variation.
+
+```{r,out.width='33.3%'}
+par(mfrow=c(1,3))
+qplot(time,GEEFHSModel_UN$residuals, main = "Unstructured model")
+qplot(time,GEEFHSModel_AR1$residuals, main = "Autoregressive model")
+qplot(time,GEEFHSModel_IND$residuals, main = "Independence model")
+```
+
+The figure above shows the plots of scaled residuals against time for all three models. Observe that for all three working correlation structures, there appears to be a very slight increase in residual variation over time. The independence model still appears to be the best fit.
+
+Thus, the indepence model is fitted to the data.
+
+Using the independence working correlation structure, the estimated function can be written as:
+
+$$
+\hat{\mu}_i=\exp\Big(3.292-0.034\times(time)_{it}+0.012\times (Sex)_i-0.296 \times (TrtGroup)_i\Big)
+$$
+
+Using Wald tests, the effect of sex (p-value $\approx 0.79$ ) was shown to be not significant. But the effects of time (p-value $< 0.0001)$ and treatment group (p-value $<0.0001$) were found to be significant. The figure below shows the plot predicted average blood lead levels by sex, for both populations - males (left) and females (right).
+
+```{r, warning=FALSE, out.width='50%', fig.align='center', fig.cap='Predicted expected blood lead level on average by treatment group',message=FALSE}
+p
+```
+
+
+## Conclusions:
+Here, interpretations are made. Recall, the purpose of the analysis is to determine whether expected blood lead levels on average differ between male and female children and whether they differ by treatment group.
+
+For sex (male and female) which is the main interest of the research, the expected blood lead level on average do not differ by sex. So male and female children have the same expected blood lead level on average. This also supports the interaction plot shown earlier. 
+
+Other results include:
+
+For time, the expected blood lead level on average is expected to be lower for populations later in the study. Specifically, the expected blood lead level for one population is expected to be about  $\exp(-0.034) \approx 0.97$ times that of a similar population one time earlier in the study. 
+
+For treatment group, blood lead level on average differ by treatment group. The expected blood lead level on average is expected to be lower for populations later in the study. Specifically, the expected blood lead level for children in the succimer treatment group is expected to be about  $\exp(-0.296) \approx 0.74$ times that those in the placebo group. 
+
+
+
+
+\newpage
+## Appendix
+```{r, c, echo=TRUE, warning=FALSE,out.width='70%'}
+## MEANS AND VARIANCES BY TIME ##
+aggregate(Blood.LL~time,FUN=function(x)mean(x,na.rm=TRUE))
+aggregate(Blood.LL~time,FUN=function(x)var(x,na.rm=TRUE))
+
+cov(BLL_matrix,use="complete.obs")
+cor(BLL_matrix,use="complete.obs")
+
+# BETTER TIME PLOT #
+p1<- ggplot(BLL, aes(x=time,y=Blood.LL)) +
+	geom_point(col='grey45') + 
+	geom_smooth(col='grey45') +
+	ggtitle("Time Plot of Blood Lead Level Versus Time") + 
+	xlab("Time") + 
+	ylab("Blood Lead Level") +
+	theme(axis.text=element_text(size=16), axis.title=element_text(size=20), plot.title=element_text(size=24))
+
+
+library(gridExtra)
+library(grid)
+library(ggplot2)
+library(lattice)
+
+## SPAGHETTI PLOT ##
+p2 <- ggplot(data = BLL, aes(x = time,y=Blood.LL, group = ChildID)) + geom_line()+xlab("Time") + 
+  ylab("Blood Lead Level")
+
+grid.arrange(p1, p2, nrow = 2)
+```
