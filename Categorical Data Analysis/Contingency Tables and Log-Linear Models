@@ -1,0 +1,317 @@
+---
+title: "Project 1: Contingency Tables and Log-Linear Models"
+author: "David O. Agboola"
+#date: "March 23, 2019"
+header-includes:
+    - \usepackage{setspace}\doublespacing
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\begin{center}
+\bf\large{Purpose of the Analysis}
+\end{center}
+
+A lot of interest has been shown in analyzing the relationship and association among hair color, eye color and gender. 
+
+An analysis will be carried out on the secondary data collected at the University of Delaware by Snee (1974) to estimate the likelihood associated with having black hair color for students with brown and blue eyes color regardless of gender; ratio of success to failure for not having black hair color across each eye color; and comparing the likelihood associated with having and not having a black hair color across each type of eye color. We also seek to know whether there is a relationship between hair color and gender, hair color and eye color, and eye color and gender. 
+
+
+\begin{center}
+\bf\large{Description of the Data}
+\end{center}
+
+The (HairEyeColor) data collected from this study is from a survey of 592 statistics students at the University of Delaware reported by Snee (1974). This data is available in R. The hair and eye color as well as gender was recorded for all 592 students. There were four eye colors recorded (brown, blue, hazel, and green) and four hair colors recorded (black, brown, red, and blond) for the genders (male and female). The table below shows a contingency table of the data on hair and eye color for each gender. Other contingency tables further shows cell frequencies by gender.
+
+```{r echo=F,fig.cap="Contingency Marginal Table"}
+knitr::include_graphics("freq.png",dpi = 10)
+```
+\begin{verbatim}
+, , Sex = Male
+Eye
+Hair    Brown Blue Hazel Green
+Black    32   11    10     3
+Brown    53   50    25    15
+Red      10   10     7     7
+Blond     3   30     5     8
+, , Sex = Female
+Eye
+Hair    Brown Blue Hazel Green
+Black    36    9     5     2
+Brown    66   34    29    14
+Red      16    7     7     7
+Blond     4   64     5     8
+\end{verbatim}
+
+\begin{center}
+\bf\large{Proposed Analysis}
+\end{center}
+
+Descriptives are first carried out for exploratory analysis. Starting with a mosaic plot, this is a graphical method for visualizing data from two or more qualitative variables. It gives an overview of the data and makes it possible to recognize relationships between different variables. A Pearson chi-square test for independence is employed to answer the question of association. The test is applied when you have two categorical variables from a single population. It is used to determine whether there is a significant association between the two  categorical variables. We need to check if the expected frequency count for each cell of the contingency table is at least 5. Using the data, the degrees of freedom, expected frequencies, test statistic, and the p-value associated with the test statistic will be calculated.
+
+The $df = (I - 1) \cdot (J - 1)$ where $I$ is the number of levels for one categorical variable, and $J$ is the number of levels for the other categorical variable.
+
+\textbf{Expected frequencies:} The expected frequency counts are computed separately for each level of one categorical variable at each level of the other categorical variable. Compute $I\cdot J$ expected frequencies, according to the following formula.
+\[
+E_{I,J} = \dfrac{n_I\cdot n_J}{n}
+\]
+	where $E_{I,J}$ is the expected frequency count for level $I$ of a Variable A and level $J$ of  a Variable B, $n_{I}$ is the total number of sample observations at level $I$ of Variable A, $n_{J}$ is the total number of sample observations at level $J$ of Variable B, and $n$ is the total sample size.
+	
+\textbf{Test statistic:} The test statistic is a chi-square random variable $\chi^{2}$ defined by the following equation.
+\[
+\chi^{2^{*}} = \sum \dfrac{(O-E)^2}{E}
+\]
+where $O$ is the observed frequency count at level $I$ of Variable A and level $J$ of Variable B, and $E$ is the expected frequency count at level $I$ of Variable A and level $J$ of Variable B.
+	
+\textbf{Decision Rules:} As with many statistical tests, decision is made by either comparing the value of the test statistic to a critical value (rejection region approach), or by finding the probability of getting this test statistic value or one more extreme (p-value approach).  The critical value for the  Chi-square test is $\chi^{2}_{\alpha}$ with degrees of freedom = $(I-1)\cdot(J - 1)$, while the p-value is found by $P(\chi^{2}_{\alpha}>\chi^{2^{*}})$ with degrees of freedom = $(I - 1)\cdot(J - 1)$. An alpha level, $\alpha =0.05$ is chosen for this analysis.
+
+\textbf{Odds:} For a population, 
+\[
+\Omega_1=\dfrac{\pi_1}{1-\pi_1}.
+\]
+
+\textbf{Odds Ratio:} To compare odds and populations, 
+\[
+\Theta=\dfrac{\Omega_1}{\Omega_2}.
+\]
+
+\textbf{Odds Ratio:} To compare likelihoods across populations, 
+\[
+RR=\dfrac{\pi_1}{\pi_2}.
+\]
+
+
+\begin{center} 
+\bf\large{Analysis Results}
+\end{center}
+
+Mosaic plot represents the counts in a contingency table directly by tiles whose size is proportional to the cell frequency is obtained. The mosaic plot of the contingency marginal table and contingency table for this analysis is shown below:
+```{r, echo=F,mosaic}
+require(graphics)
+## Full mosaic
+library(vcd)
+mosaic(HairEyeColor,shade = T,legend=T)
+## Aggregate over gender (as in Snee's original data)
+x <- apply(HairEyeColor, c(1, 2), sum)
+x
+mosaic(x, main = "Relation between hair and eye color",shade = T,legend=T)
+```
+
+Observe from the mosaic plot that the association between Hair and Eye color reflects that people with dark hair tend to have dark eyes; those with light hair tend to have light eyes; but people with red hair do not quite fit this pattern. So to answer the question about association, the Chi-Square Test of independence is used to test the following hypothesis. Observe that all the cell counts in the contingency table are greater than $5$. This is a requirement to continue with the test.
+
+Let:
+
+$H_{0}: \text{Hair color and eye color are not associated.}$
+
+$H_{1}: \text{Hair color and eye color are associated.}$
+```{r, echo=F,hyp}
+chisq.test(x)
+#counts <- table(mtcars$vs, mtcars$gear)
+barplot(x, main="Eye Color vs. Hair Color",
+  xlab="Eye Color", col=c("black","brown","red","darkblue"),
+  legend = rownames(x), beside=TRUE)
+```
+
+
+Observe that the Chi-squared test above showed a significant relationship exists between Hair Color and Eye Color ($p<0.0001$). The attached plot shows  that the pattern of heights on the bars is changed across the different colors of hair. For Brown eyes, the most common hair color is brown, followed by black, then red, then blond. For Blue eyes, the most common hair color is blond, then brown with black and red being much more rare. For Hazel eyes, most people also seem to have brown hair with black, then red, then blond ranks less common. People with green eyes also have brown hair as the most common result, with blond, red, and black following behind.
+
+Let:
+
+$H_{0}: \text{Hair color and gender are not associated.}$
+
+$H_{1}:\text{Hair color and gender are associated.}$
+```{r, echo=F,hyp1 }
+M <- apply(HairEyeColor[,,"Male"],1,sum)
+F <- apply(HairEyeColor[,,"Female"],1,sum)
+HG <- cbind(M,F)
+chi.HEC2 <- chisq.test(HG)
+chi.HEC2 
+barplot(HG, main="Gender vs. Hair Color",
+  xlab="Gender", col=c("black","brown","red","darkblue"),
+  legend = rownames(HG), beside=TRUE)
+```
+
+The relationship between Gender and Hair Color is stated to be significant according to the chi-squared test $(p=0.04613)$. As can be seen in the above plot, the pattern of brown hair being the most common and red hair being the least common is similar across both genders. However, the reversal of the pattern is seen in that for males, black hair is more common than blond while for women, blond hair is more common than black.
+
+Let:
+
+$H_{0}:\text{Eye color and gender are not associated.}$
+
+$H_{1}:\text{Eye color and gender are associated.}$
+
+```{r, echo=F,hyp2}
+M <- apply(HairEyeColor[,,"Male"],2,sum)
+F <- apply(HairEyeColor[,,"Female"],2,sum)
+EG <- cbind(M,F)
+chi.HEC3 <- chisq.test(EG)
+chi.HEC3 
+barplot(EG, main="Gender vs. Eye Color",
+  xlab="Gender", col=c("black","brown","red","darkblue"),
+  legend = rownames(EG), beside=TRUE)
+```
+
+Observe from the above result that there is no relationship between Gender and Eye Color ($p=0.6754$). This implies that the general pattern of eye color is relatively similar across genders. Brown and blue are the most common colors and hazel and green are the least common. While the sample showed some evidence that perhaps brown is more common than blue in women and blue is more common than brown in males, there is insufficient evidence to make such a conclusion about the population. Thus we conclude that eye color is not associated with gender. It is interesting to note that these plots do support the conclusion that brown eyes and blue eyes are much more common that hazel and green in the general population.
+
+Using the Contingency Marginal Table:
+
+The relative risk associated with the probability of having black hair color for students with brown and blue eye color is the ratio of success probabilities:
+
+\begin{enumerate}
+\item 
+\[
+RR_{Br,Bl}=\dfrac{68/592}{20/592}=3.4.
+\]
+
+The odds of not having black hair color for each eye color is the ratio of success probability to failure probability, within each population:
+
+\item
+\[
+\Omega_{Br,(Bla,Others)}=\dfrac{152/592}{68/592}=2.2.
+\]
+
+\item
+\[
+\Omega_{Bl,(Bla,Others)}=\dfrac{195/592}{20/592}=9.75.
+\]
+
+\item
+\[
+\Omega_{Ha,(Bla,Others)}=\dfrac{78/592}{15/592}=5.2.
+\]
+
+\item
+\[
+\Omega_{Gr,(Bla,Others)}=\dfrac{59/592}{5/592}=11.8.
+\]
+
+The odds ratio of not having black hair color:
+\item
+\[
+\Theta_{Bl,Br,(Bla,Others)}=\dfrac{9.75}{2.2}=4.4.
+\]
+
+\item
+\[
+\Theta_{Ha,Br,(Bla,Others)}=\dfrac{5.2}{2.2}=2.4.
+\]
+
+\item
+\[
+\Theta_{Gr,Br,(Bla,Others)}=\dfrac{11.8}{2.2}=5.4.
+\]
+
+\item
+\[
+\Theta_{Bl,Ha,(Bla,Others)}=\dfrac{9.75}{5.2}\approx1.9.
+\]
+
+\item
+\[
+\Theta_{Gr,Bl,(Bla,Others)}=\dfrac{11.8}{9.75}\approx1.2.
+\]
+
+\item
+\[
+\Theta_{Gr,Ha,(Bla,Others)}=\dfrac{11.8}{5.2}\approx2.3.
+\]
+\end{enumerate}
+
+\begin{center} 
+\bf\large{Conclusions}
+\end{center}
+
+This project sought to investigate, for the 592 statistics students of Delaware University, whether their is a relationship between hair color and their eye color regardless of gender, whether there is a relationship between hair color and gender, and whether there is a relationship between eye color and gender. We observed that there is  association between gender and hair color was found to be statistically significant. However, it is worthy to note that there was no significant relationship found between gender and eye color of the 592 statistics students of the University of Delaware.
+
+Interpretation:
+\begin{enumerate}
+\item The probability of having a black hair color for students with blue eye color is 3.4 times that of students with brown eye color. 
+
+\item The odds of not having a black hair color (versus having a black hair color) for students with brown eye color is 2.2.
+
+\item The odds of not having a black hair color (versus having a black hair color) for students with blue eye color is 9.75.
+
+\item The odds of not having a black hair color (versus having a black hair color) for students with hazel eye color is 5.2.
+
+\item The odds of not having a black hair color (versus having a black hair color) for students with green eye color is 11.8.
+
+\item The odds of not having black hair color for students with blue eye color is 4.4 times the odds of not having black eye color for students with brown eye color. 
+
+\item The odds of not having black hair color for students with hazel eye color is 2.4 times the odds of not having black eye color for students with brown eye color. 
+
+\item The odds of not having black hair color for students with green eye color is 5.4 times the odds of not having black eye color for students with brown eye color. 
+
+\item The odds of not having black hair color for students with blue eye color is 1.9 times the odds of not having black eye color for students with hazel eye color. 
+
+\item The odds of not having black hair color for students with green eye color is 1.2 times the odds of not having black eye color for students with blue eye color. 
+
+\item The odds of not having black hair color for students with green eye color is 2.3 times the odds of not having black eye color for students with hazel eye color. 
+
+\end{enumerate}
+
+
+\newpage
+\begin{center}
+\bf\large{PART II }
+\end{center}
+
+## Question i.
+
+a. In the context of contingency tables, there are no fixed totals for \textbf{Poisson Sampling}. Each of the column totals and the row totals are independent Poisson.
+
+b. In the context of contingency tables, the total sample size is fixed for \textbf{Multinomial Sampling}. All cell counts are treated as components of a single multinomial.
+
+c. In the context of contingency tables, the row totals are fixed for \textbf{Independent Multinomial Sampling}. Counts across each row is treated as a separate multinomial.
+
+## Question ii.
+
+For categorical data, the mean-variance relationship refers to the property that the variation is often calculated using the mean. This implies that the variation changes depending on the value of the mean. This is important for categorical data analysis because we do not have the assumption of constant variation.
+
+## Question iii.
+
+a. Probability is the measure of likelihood of an event.
+
+b. Odds is a measure to quantify relative likelihood of outcomes within one population. It is ratio of probability of success to probability of failure within a population.
+
+c. Odds ratio is a measure of comparison of odds and populations.
+
+## Question iv. 
+
+The Likelihood Ratio Test statistic equals:
+\[
+-2\log\Lambda=-2\log(l_0/l_1)=-2(L_o-L_1),
+\]
+where $L_0$ and $L_1$ denote the maximized log-likelihood functions.
+This test determines the parameter values that maximize the likelihood function under the assumption that $H_0$ is true. It also determines the values that maximize it under the more general condition that $H_0$ may or may not be true. It compares log-likelihood under the null and alternative hypothesis. The difference in log-likelihood equals to log of the ratio of likelihood. 
+We can think of $L_1$ as some measure of ``information'' in the data and $L_0$ as a lesser amount of information from the model. 
+This ratio cannot exceed $1.0$. If the maximized likelihood is much larger when the parameters are not forced to satisfy $H_0$, then the ratio $\Lambda$ is far below $1$ and there is strong evidence against $H_0$.
+A greater distance (that is, large value of test statistic) means more information ``lost'' moving from data to a model which provides stronger evidence against $H_0$. While a smaller distance (or small value of test statistic) means a good fit because log-likelihoods are ''close''. A multinomial distribution is assumed for calculation.
+
+## Question v.
+
+Two variables $X$ and $Y$ are conditional independent given a variable $Z$ when they are conditionally independent at every level of $Z$. But does not say anything about the independence with $Z$. Hence, given $Z$, $Y$ does not depend on $X$. So,
+\[
+\begin{split}
+P(Y=j|X=i,Z=k)&=P(Y=j|Z=k), \text{ for all }i, j.\\
+&\Rightarrow \pi_{ijk}=\dfrac{\pi_{i+k}\pi_{+jk}}{\pi_{++k}} \text{ for all levels of } k.
+\end{split}
+\]
+
+While homogeneous association means that the association between $X$ and $Y$ does not depend on the level of $Z$. Here, dependence is allowed, but it must be consistent. Hence, a $2$X$2$X$K$ tables has homogeneous $XY$ association when:
+\[
+\begin{split}
+\theta_{XY|K}&=c \quad \text{ for all } \quad k\\
+\Rightarrow \theta_{XY|1)}&=\theta_{XY|2}= \ldots = \theta_{XY|K}.
+\end{split}
+\]
+Then the effect of $X$ on $Y$ is the same at each category of $Z$. This is also known as the no 3-factor interaction. Conditional independence of $X$ and $Y$ is the special case in which each $\theta_{XY|k}=1$ for all values of $k$.
+
+## Question vi.
+
+Homogeneous Association model is:
+\[
+\ln(\mu_{ijk})=\lambda+\lambda_i^X+\lambda_j^Y+\lambda_k^Z+\lambda_{ik}^{XZ}+\lambda_{jk}^{YZ}+\lambda_{ij}^{XY}.
+\]
+where $\mu_{ijk}$ is the expected cell frequency of the $(i,j)$-th for each $k-$th level of $Z$; $\lambda_{ij}^{XY}$ is the association term reflecting deviation from the independence or interaction effect between $i-$th category of $X$ and $j-$th category of $Y$; $\lambda_{jk}^{YZ}$ is the association term reflecting deviation from the independence or interaction effect between $j-$th category of $Y$ and $k-$th category of $Z$; $\lambda_{ik}^{XZ}$ is the association term reflecting deviation from the interaction effect between $i-$th category of $X$ and $k-$th category of $Z$; $\lambda_{ijk}^{XYZ}$ is the 3-factor interaction, $\lambda_i^X$ is the $i-$th row effect; $\lambda_j^Y$ is the $j-$th column effect; $\lambda_k^Z$ is the  effect of category $Z$; and $\lambda$ is the overall effect.
