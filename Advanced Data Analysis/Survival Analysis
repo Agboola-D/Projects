@@ -1,0 +1,239 @@
+---
+title: "Project 5: Survival Analysis"
+author: "David O. Agboola"
+#date: "March 23, 2019"
+header-includes:
+    - \usepackage{setspace}\doublespacing
+    - \usepackage{accents}
+    - \usepackage{enumerate}
+    - \usepackage{bbm}
+    - \usepackage{amsmath}
+    - \renewcommand{\vec}[1]{{\underset{\sim}{#1}}}
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Purpose of the Analysis
+
+Prevalent illicit drug use among teens is continuing to increase in many countries around the world. One of such illicit drugs - heroin is an addictive drug that is one of the most abused drugs. Heroin is processed from morphine and mostly appears as a white or brown powder. According to the 2006 National Survey on Drug Use and Health (NSDUH), about 3.8 million Americans aged 12 or older have reportedly tried heroin at least once during their lifetimes. This represents about $1.5\%$ of the population aged 12 or older. A variety of effective treatments are available for heroin addiction.  
+
+An analysis will be carried out to evaluate the number of days heroin addicts survive with the effect of prison record and the clinic admitted. 
+
+## Description of the Data
+
+The dataset was obtained from a 2007 Australian study by Caplehorn et al., and contains information on 238 heroin addicts. A patient’s survival time was determined as
+the time, in days, until the individual dropped out of the clinic or was censored. The two clinics differed according to their live-in policies for patients.
+
+The original dataset has six variables but the dataset for this study has four variables defined as follows:
+SURVT - this is the time (in days) until the patient dropped out of the clinic or was censored. STATUS - this has two levels (0/1) and indicates whether the patient dropped out of the clinic (1) or was censored (0). CLINIC - this indicates which methadone treatment clinic the patient attended and it also has two levels (1/2). PRISON - this indicates whether the patient had a prison record (1) or not (0).
+
+
+## Proposed Analysis
+The Cox Proportional Hazards Regression model:
+\[
+h(t, \vec{X},\vec{\beta}) = h_0(t)e^{\beta_0+\beta_1(Prison)+\beta_2(Clinic)}
+\]
+would be used because of the interest in the effect of the covariates - prison record and type of clinic on survival time.
+
+First of, exploratory analysis will be carried out on the dataset using the survival median, survival function and hazard function. The survival function should describe the likelihood of lasting beyond a certain time, while the hazard function describes the instataneous rate of change of conditional probability accumulated. 
+Then the dataset will be analyzed to assess the survival time of heroin addicts as a function prison record, and the clinic admitted. The survival functions will be estimated and compared across the clinics and prison levels using a stratified approach. A cox proportional hazard model is run to obtain the regression coefficients, standard errors, and a Wald test statistic (z) for each covariate, with corresponding p-value and $95\%$ confidence interval. Thus, the effect of clinic, and prison record on the survival time of the heroin addicts will be determined. If the proportional hazard assumption is not met for any of the covariates, a stratified Cox model is built. A proportional hazards (PH) model is also run noting that the key assumption of this model is that hazard ratios are constant over time. 
+
+Inferential analysis involves fitting the Cox proportional hazards model to the dataset. The Schoenfeld residuals will be used to construct $\chi^2$ tests for $\gamma$. Then visual inspection is employed to observe changes over time. The proportional hazards assumption is evaluated using the GLOBAL test and hazard plots. Generally, the plot is observed to see if there is a parallel trend or if the plot flattens near zero - this will be good. Then interpretations are made on survival time using covariates or independent variables that are statistically significant.
+
+ 
+## Analysis Results
+
+```{r include=FALSE,echo=FALSE,error=FALSE,message=FALSE,warning=FALSE}
+library('ggplot2')
+library('survival')
+library('KMsurv')
+library(km.ci)
+
+
+setwd("C:\\Users\\agboo\\OneDrive - University of Northern Colorado\\Spring 2019\\SRM 611\\Project")
+HeroData = read.table('Heroin.txt',header = TRUE)
+SFunction <- survfit(Surv(SURVT,status)~1, data=HeroData, conf.type="log-log")
+
+```
+
+```{r med, echo=TRUE}
+print(SFunction,show.rmean=TRUE,message=FALSE)
+```
+From the results above, observe that the median survival time is 504 days with a $95\%$ confidence interval of $[394,550]$. Samples of survival times are frequently skewed, thus, the median is a better measure of central location than mean.
+
+```{r surcli, echo=FALSE,  out.width='300px'}
+## SURVIVAL FUNCTIONS BY GROUPS ##
+##	DOTTED LINE IS CLINIC 2	##
+SFunction_clinic = survfit(Surv(SURVT,status)~strata(clinic), data=HeroData, conf.type="log-log")
+plot(SFunction_clinic,lty=c(1,3))
+```
+
+The plot above provides important results regarding the comparison of the two clinics. The curve for clinic 2 consistently lies above the curve for clinic 1, indicating that clinic 2 does better than clinic 1 in retaining its patients. Also, because the two curves diverge after about a year, it appears that clinic 2 is largely superior to clinic 1 after one year but only slightly better than clinic 1 prior to one year. 
+
+```{r surcli2, echo=FALSE,  out.width='300px'}
+## SURVIVAL FUNCTIONS BY GROUPS ##
+##	DOTTED LINE IS PRISON=1	##
+SFunction_prison = survfit(Surv(SURVT,status)~strata(prison), data=HeroData, conf.type="log-log")
+plot(SFunction_prison,lty=c(1,3))
+```
+
+
+The plot above provides important results regarding the comparison of the patient's prison records. The curve for those with prison records mostly lies below the curve for those without prison records, indicating that those with prison records do worse than those without prison records in surviving a drug event. Also, because the two curves diverge after about a year, it appears that those with prison records are have lower likelihood of surviving a drug event compared to those without after one year but over time both groups experience the same lower likelihood of survival.
+
+```{r survp, echo=FALSE, out.width='400px'}
+SFunction <- survfit(Surv(SURVT,status)~1, data=HeroData, conf.type="log-log")
+
+par(mfrow=c(1,2))
+plot(SFunction,main="Survival Function",xlab="Survival Time",ylab="Survival Probability")
+
+## CUMULATIVE HAZARD FUNCTION ##
+plot(SFunction,fun="cumhaz",main="Cumulative Hazard Function",xlab="Survival Time",ylab="Cumulative Hazard")
+```
+
+Observe from the plots above that the probability of a patient surviving after a drug event declines with
+time. Hence, the likelihood of a patient surviving at least 600 days after a drug event is $0.4$. While the
+likelihood of surviving 800 days is about $0.25.$ 
+
+```{r cox1, eval=TRUE, include=FALSE}
+PHModel = coxph(Surv(SURVT,status)~prison+clinic, data=HeroData)
+schoenfeldResiduals = residuals(PHModel,type="scaledsch")
+```
+Testing Assumptions of proportional hazards
+
+Variable     |   P-Value     |
+------------ | ------------- |
+Prison   | 0.721  | 
+Clinic      | 0.000483      | 
+GLOBAL    | 0.00178
+```{r plot, echo=FALSE,eval=TRUE, include=FALSE}
+par(mfrow=c(1,2))
+(PHTest = cox.zph(PHModel))
+plot(PHTest)
+```
+
+Testing Assumptions of log-scaled proportional hazards
+
+Variable     |   P-Value     |
+------------ | ------------- |
+Prison   | 0.724  | 
+Clinic      | 0.0042      | 
+GLOBAL    | 0.0135
+```{r plot 2, eval=TRUE, include=FALSE}
+par(mfrow=c(1,2))
+(PHTest_log = cox.zph(PHModel,transform="log"))
+plot(PHTest_log)
+```
+
+Using the scaled (log-transformed) and unscaled Schoenfeld residuals, observe from the results above that GLOBAL has a low p-value which implies that there is sufficient evidence for the violation of the assumption of proportional hazards. Thus, the effects of all the predictors on the hazard of death change over time. For specific predictors, reject the assumption of proportional hazards for clinic since it has a low p-value, but fail to reject the assumption of proportional hazards for prison since it has a high p-value using significance level of $0.05$. This result is supported by the plots (See Appendix).
+
+```{r trend, echo=FALSE,include=FALSE}
+## FOR CLINIC ##
+par(mfrow=c(1,2))
+plot(PHTest[2])
+abline(h=0)
+plot(PHTest_log[2])
+abline(h=0)
+```
+
+```{r mod, eval=TRUE, include=FALSE}
+summary(PHModel)
+```
+Variable     |   P-Value     | coef  | exp(coef)
+------------ | ------------- | ------|-----------
+Prison   | 0.093 |   0.02778| 1.3203|
+Clinic      | <0.0001     | -1.1089| 0.3299|
+Wald test    | <0.0001
+
+The fitted model is:
+\[
+h(t, \vec{X},\vec{\beta}) = h_0(t)e^{\beta_0-\beta_1(1.11)}.
+\]
+Observe that prison is not statistically significant.
+
+## Conclusions
+
+From the analysis, the two clinics seem to be very different in terms of medical support administered. It makes sense to think that the type of patients admitted could be different for the two clinics. Long term addicts might be admitted in one clinic and addicts exposed to low or moderate levels of heroin might be admitted to another one which could be the cause of the difference. 
+It will be interesting to see how the prison record affects their level of addiction and thus their survival time. Though it is expected that most of the people with prison record would have higher levels of addiction to heroin and less survival times compared to the ones without any prison record, there was no observed significant relationship between the prison record and survival time. Thus, survival time for addicts with or without prison records do not change over time.
+
+The purpose of this analysis is to evaluate the number of days heroin addicts survive with the effect of prison record and the clinic admitted. 
+Since only clinic has statistical relationship with survival time, for patients admitted in clinic 2, the odds of surviving a drug event is expected to be approximately $3.03$ times those of clinic 1.
+
+\newpage
+
+\begin{center}
+\bf\large{APPENDIX}
+\end{center}
+
+
+#### R CODE:
+
+```{r echo=TRUE,tidy=TRUE,warning=FALSE}
+setwd("C:\\Users\\agboo\\OneDrive - University of Northern Colorado\\Spring 2019\\SRM 611\\Project")
+
+## PROJECT: SURVIVAL ANALYSIS FOR HEROIN ADDICTS ##
+
+## MODEL TOTAL LENGTH OF HEROIN ADDICT SURVIVAL ##
+##	SURVT VERSUS PRISON, CLINIC, STATUS	##
+
+library('ggplot2')
+library('survival')
+library('KMsurv')
+library(km.ci)
+
+#HeroData = read.table('Heroin.txt',header = TRUE)
+
+## SURVIVAL FUNCTION ##
+SFunction <- survfit(Surv(SURVT,status)~1, data=HeroData, conf.type="log-log")
+
+## SURVIVAL FUNCTION PLOT ##
+plot(SFunction,main="Survival Function",xlab="Survival Time",ylab="Survival Probability")
+
+## SURVIVAL TABLE ##
+summary(SFunction)
+
+# SURVIVAL MEDIAN ##
+print(SFunction,show.rmean=TRUE)
+
+## SURVIVAL FUNCTIONS BY GROUPS ##
+##	DOTTED LINE IS SECOND GROUP	##
+SFunction_prison = survfit(Surv(SURVT,status)~strata(prison), data=HeroData, conf.type="log-log")
+plot(SFunction_prison,lty=c(1,3))
+
+print(SFunction_prison, show.rmean=TRUE)
+
+SFunction_clinic = survfit(Surv(SURVT,status)~strata(clinic), data=HeroData, conf.type="log-log")
+plot(SFunction_clinic,lty=c(1,3))
+
+print(SFunction_clinic, show.rmean=TRUE)
+
+## CUMULATIVE HAZARD FUNCTION ##
+plot(SFunction,fun="cumhaz",main="Cumulative Hazard Function",xlab="Survival Time",ylab="Cumulative Hazard")
+
+## COX PROPORTIONAL HAZARDS MODEL ##
+PHModel = coxph(Surv(SURVT,status)~prison+clinic, data=HeroData)
+
+## SCHOENFELD RESIDUALS ##
+schoenfeldResiduals = residuals(PHModel,type="scaledsch")
+summary(schoenfeldResiduals)
+
+(PHTest = cox.zph(PHModel))
+(PHTest_log = cox.zph(PHModel,transform="log"))
+
+par(mfrow=c(1,2))
+plot(PHTest)
+par(mfrow=c(1,2))
+plot(PHTest_log)
+
+
+par(mfrow=c(1,2))
+plot(PHTest[2])
+abline(h=0)
+plot(PHTest_log[2])
+abline(h=0)
+
+
+summary(PHModel)
+```
