@@ -1,0 +1,103 @@
+---
+title: "Project 2: Logistic Regression: Study of nesting horseshoe crabs."
+author: "David O. Agboola"
+#date: "March 23, 2019"
+header-includes:
+    - \usepackage{setspace}\doublespacing
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\begin{center}
+\bf\large{Purpose of the Analysis}
+\end{center}
+
+This is a study of nesting horseshoe crabs on an Island in the Gulf of Mexico (J. Brockman, Ethology, 1996). Each female crab in the study had a male crab attached to her in her nest. During spawning season, the females migrate to a shore on breed, with a male attached to her posterior spine, and she burrows into the sand and lays clusters of eggs. During spawning, other male crabs may group around the pair and may also fertilize the eggs. These male crabs that cluster around the female crab are called satellites (Agresti, 2012).
+
+This study will:
+
+\begin{itemize}
+\item [i.] investigate factors that affect whether the female crab had any other males, called satellites, residing nearby her.
+\item [ii.] investigate whether there is a significant relationship between the presence-absence of males and the width of the female.
+\end{itemize}
+
+\begin{center}
+\bf\large{Description of the Data}
+\end{center}
+
+The data used in this study is a variation of the data resulting from the study of 173 nesting horseshoe crabs conducted by Brockman (1996).  The independent variables thought possibly to affect this included the female crab’s color, spine condition, weight, and carapace width. The response variable for each female crab is her number of satellites. The response variable will be considered as a binary random variable: $y=1$ means she has at least one satellite, and $y=0$ means she has no satellites. The table below provides a detailed description for variables in the dataset.
+
+
+Variable  | Descriptions
+-------------| -------------
+color:       | 1 - light medium, 2 - medium, 3 - dark medium, 4 - dark
+spine:       | 1 - both good, 2 - one worn or broken, 3 - both worn or broken
+width:       | carapace width in cm
+satell:      | number of satellites
+weight:      | weight in kg
+
+
+\begin{center}
+\bf\large{Proposed Analysis}
+\end{center}
+
+The data is explored through descriptives such as contingency tables by comaparing independent variables with the response. We apply binary multiple logistic regression model to investigate the factors that affect whether the female crab had any other males, called satellites, residing nearby her. This is because interest is in modelling the "presence or absence" of male is dependent upon characteristics (for now just the carapace width) of the female horseshoe crabs. This reponse is binary and thus a binary logistic regression suffices.
+
+The binary response follows the Bernoulli distribution with probability of success $\pi$ and probability of failure $1-\pi$. The logistic regression model is expressed as:
+\[
+\ln\Bigg(\dfrac{\pi(x)}{1-\pi(x)}\Bigg) =\beta_0 + \beta_1x_1 + \beta_2x_2 + \ldots + \beta_kx_k.
+\]
+To test whether there is a significant relationship between the presence-absence of males and the width of the female, we would check the statistical significance of the variable from the fitted model. To test the lack of fit of the model, the Hosmer-Lemeshow $\chi^2$ goodness-of-fit (GOF), and ROC curve will be used.
+
+
+\begin{center} 
+\bf\large{Analysis Results}
+\end{center}
+
+After fitting the model, "color", "spine", and "weight" were not statistically significant, hence were removed from the model. It was observed from the model that only carapace width has an effect on whether the female crab had any other males residing nearby her. This implies that carapace width has a relationship with presence or absence of males. The fitted logistic regression
+model is:
+\[
+\ln\Bigg(\dfrac{\pi_i}{1-\pi_i}\Bigg)=-12.35+0.497\cdot width.
+\]
+```{r, echo=T,warning=FALSE,message=FALSE,tidy=TRUE,echo=FALSE}
+setwd("/Users/agboo/OneDrive - University of Northern Colorado/Fall 2019/SRM 635/Dataset")
+Crab<-read.table("crabs.txt",header = TRUE)
+#summary(Crab)
+#table(Crab$y,Crab$color,useNA='ifany')
+#prop.table(table(Crab$y,Crab$color,useNA='ifany'),margin=2)
+#table(Crab$y,Crab$spine,useNA='ifany')
+#prop.table(table(Crab$y,Crab$spine,useNA='ifany'),margin=2)
+LRModel = glm(y~width,data=Crab,family=binomial)
+(LRSummary = summary(LRModel))
+#exp(-12.3508+0.4972*mean(Crab$width))
+predictedData <- data.frame(Predicted=LRModel$fitted.values,width=LRModel$model$width)
+library("ggplot2")
+ggplot(predictedData, aes(x=width,y=Predicted)) +
+	geom_point(col='grey45') + 
+	geom_smooth(col='grey45') +
+	ggtitle("Predicted Probabilities by width") + 
+	xlab("Width") + 
+	ylab("Predicted Probabilities") +
+	theme(axis.text=element_text(size=16), axis.title=element_text(size=20), plot.title=element_text(size=24))
+library(ResourceSelection)
+hoslem.test(LRModel$model$y,LRModel$fitted.values)
+library(pROC)
+roc(LRModel$model$y~LRModel$fitted.values,plot=TRUE)
+fivenum(summary(LRModel)$deviance.resid)
+```
+By exponentiating the coefficient estimate of width we can obtain an estimate of the odds ratio, which is, $\exp(0.4972) \approx 1.644$. This implies that every one centimeter increase in carapace width increases the odds of a satellite male being present by $1.64$.By interpreting in terms of the mean carapace width $\exp(\hat{\beta_0}+\hat{\beta_1}(\bar{width})\approx 2.06$, we have: for average carapace width, expect the odds of a male being present to be $2.06$.
+
+From the output, we observed that the Hosmer-Lemeshow goodness of fit test does not show evidence of a poor fit. Similarly, the ROC Curve shows a good fit and AUC$\approx 0.74$ supports this claim.
+The deviance residual $(-2.03 \leq d \leq 1.69)$ does not indicate a poor fit. So, our interpretations above can be trusted.
+
+Lastly, the "Predicted Probabilities by width" plot shows that width is a good predictor of the response variable.
+
+
+\begin{center} 
+\bf\large{Conclusions}
+\end{center}
+
+This project sought to first, investigate factors that affect whether the female crab had any other males, called satellites, residing nearby her. We were able to conclude that carapace width is the only factor that has such effects. We further investigated whether the female crab’s carapace width had a significant effect on males residing nearby her or not. The binary logistic regression model revealed a significant effect. This means that the presence of male crabs in a female’s nest can be attributed to a female’s carapace width. In fact, for 1000 female crabs with the average carapace width, expect about 673 males residing near them. The Hosmer-Lemeshow test, ROC Curve, and deviance residuals of the model all showed that the model fits very well.
