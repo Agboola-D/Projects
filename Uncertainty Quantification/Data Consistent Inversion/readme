@@ -1,0 +1,8 @@
+We have attempted to implement Summix on data consistent inversion method. We have used the theoretical model for Summix here just so we can understand the inversion method and move from simple to complex.
+
+Next steps:
+
+1. First identify suitable values for the alpha for the Dirichlet distribution
+2. Identify appropriate distribution for the reference allele frequency (possible options are the beta, binomial, truncated normal distribution).
+3. Consider using the actual allele frequencies  rather than generating values from a distribution
+4. Identify what form of Summix function to implement.
