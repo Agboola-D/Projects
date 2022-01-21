@@ -1,0 +1,388 @@
+---
+title: "Project 2: Conditional Models for Longitudinal Data"
+author: "David Agboola"
+#date: "April 24, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+# PART I
+
+## Question 1.
+
+The Bureau of Economic Analysis has collected data about US gross domestic product (GDP) between the years of 1997 and 2015 (http://www.bea.gov/regional/ ). Suppose researchers are interested in a simple linear-time random-slope model of industrial GDP ("GDP Industrial"), using "Year" to indicate time and "GeoName BEA" to identify individual geographic areas, but want to allow the effect of time to vary among the population.
+
+An appropriate conditional longitudinal model including linear-time random-slope model is:
+$$
+GDP_{it}=\beta_0+u_{0i}+(\beta_1+u_{1i})t_{it}+\epsilon_{it},
+$$
+
+where
+
+\[
+\begin{split}
+GDP_{it} &= \text{responses for industrial GDP for geographic area } i \text{ in year } t_{it},\\
+\beta_0 &= \text{baseline expected industrial GDP },\\
+u_{0i} &= \text{fluctuation of the baseline industrial GDP among the population of geographic areas },  \\  
+\beta_{1} &= \text{linear effect of time on expected industrial GDP }, \\
+u_{1i} &= \text{random fluctuation in linear time effect },\\
+\epsilon_{it} &= \text{ random error term }.
+\end{split}
+\]
+
+
+## Question 2.
+
+Time-dependent covariates can be included in conditional longitudinal models by creating two terms in the model. The first term represents comparisons across subjects (that is, between-subject variability, $\beta_B$); the second term represents comparisons over time (that is, within-subject variability, $\beta_W$). Interpretation of $\beta_B$: expected difference between sub-populations with different average values of the predictor ($X_{it}$). Interpretation of $\beta_W$: expected effect of individual changes (in $X_{it}$) over time.
+
+Using an example, suppose the relationship between BMI and cholesterol is of interest. Record both for patients at baseline, 3 months, 6 months, 9 months, and 12 months.
+Interpretation of $\beta_B$: for individuals from population with different typical BMI, do we expect differences in cholesterol?
+Interpretation of $\beta_W$: for individuals whose BMI changes overtime, do we expect changes in cholesterol?
+
+Both can be involved in interactions with time. This gives $\beta_{Bt}$, which is the expected change in the time effect across populations with different averages $\bar{X}_{i.}$ and $\beta_{Wt}$, which is the expected change over time of the within effect of an increase of $X_{it}$ (over time). There could be an early effect, which represents a situation where there is one effect over time or a late effect, which represents a situation where there are different effects over time.
+
+
+
+Observe that the outcome, evidence of coronary heart disease, has a binary response, "yes" or "no". At each time of observation, it is either a subject has this evidence or does not. This can also be confirmed from the actual data. For this type of data, descriptives such as contingency tables, stacked bar plots, and time plots of odds or probabilities are appropriate. A logistic regression model is designed for data of this nature - dichotomous outcome.
+
+## Question 3.
+
+The residuals are produced after fitting any conditional longitudinal model. Appropriate residuals can be produced depending on the type of estimation used for the conditional longitudinal model. Some options includes:
+
+- Conditional Raw Residuals: These are the raw differences between observed values and predicted responses, including both fixed and (subject-specific) random effects.
+$$r_{it} = y_{it} - \hat{\mu}_{it}.$$
+
+- Conditional Pearson Residuals: These residuals are scaled by a measure of variation, often called "Pearson-type" residuals. For those familiar with generalized linear models, the function in the denominator is the mean-variance relationship according to the response.
+$$\tilde{r}_{it} = \dfrac{r_{it}}{\sqrt{V(\hat{\mu}_{it})}}.$$
+
+- Linear Scale Residuals: SAS people are supportive of residuals on the scale of the linear systematic component of the model. These residuals are typically differences between "linearized" responses and the predicted right-hand-side of the model equation.
+
+To assess model fit, residual versus predicted values plot and residuals versus time plots are used. Large range of residuals is not a recipe for good model fit; so is when some aspect of residual variation is not captured by the model. 
+
+
+## Question 3.
+
+A researcher would choose a conditional logistic model or a conditional count model instead of a traditional normal conditional model when the response is not a continuous variable. That is, a variable that has infinite possibilities. 
+
+The popular use of **logistic** models is when the response is dichotomous: yes / no, pass / fail, true / false etc. Logistic models are also appropriate for sum of binary outcomes (also called a Binomial response); in which the researcher records the number of times one of two events occurs for each response value and multinomial models where there are more than two possible response outcomes. For instance, an ordinal multinomial model would be appropriate when modeling student outcomes as advanced, proficient, partially proficient, etc.
+
+Using the characteristics of the **count** response of interest, the researcher is to determine which count model appears to be most appropriate. Some longitudinal count models includes:
+
+- Poisson Regression: The classical Poisson regression is the original, and can be used in any count data situation. Results could suffer from bias or error rate inflation because the model assumes equal mean and variance.
+
+- Negative Binomial (NB) Regression: NB regression extends Poisson regression to allow for unequal mean and variance, and is usually a better fit in practice than Poisson regression. 
+
+- Truncated Regression: Truncated models are appropriate when certain counts are not possible for the research situation. This is not the same as simply not observing certain counts. For instance, when recording number of smartphones owned by students, it is possible that nobody will respond 0. It is certainly possible for somebody not to have a smartphone, but also possible that nobody will give that response during the study. This is not a situation for truncated analysis. On the other hand, in a health survey of households in a community where only adults are respondents, asking the number of adults in the household cannot result in a response of "0" because all respondents are adults. Those data are truncated.
+Both Poisson and Negative Binomial models can be truncated.
+
+- Excess Zero Models: When the data produce more zeros than would reasonably expected under either a Poisson or Negative Binomial distribution, the data have an excess of zeros. This is typically identified using tables of frequencies and histograms, although some tests exist within excess zero models.
+There are two common options for modeling excess zeros. The first is the "Zero-Inflated" model, in which the probability of observing a zero is jointly modeled along with the expected count of all observations. The second is the "Hurdle" model, in which the probability of observing a zero is modeled jointly with the
+expected count of all positive observations.
+
+
+
+\newpage
+# PART II
+
+## Purpose of the Analysis:
+In 2013, the Centers for Disease Control (CDC) estimated more than half a million US children to have lead poisoning after lowering the blood cutoff. Health officials have realized that too much lead in the blood can harm a developing brain which could lead to a lower IQ. Several clinical trials were set in motion to combat this menace. 
+
+One of these trials is for the medication - succimer (a chelating agent). An analysis will be carried out on the randomized study of succimer on lead-exposed children with blood lead levels of $20-44$ micrograms/dL. The treatment was placebo-controlled, and children were randomly assigned to either treatments.
+
+It is of interest to determine whether blood lead levels differ for succimer patients, whether there are changes over time, and whether the changes in time differed between groups.
+
+
+## Description of the Data:
+The dataset can be found in "Treatment of Lead-exposed Children (TLC) Trial Group. (2000). Safety and Efficacy of Succimer in Toddlers with Blood Lead Levels of $20-44 \mu g/dL$. Pediatric Research, 48, 593-599". This is courtesy of Dr. George G. Rhoads (Chair, TLC Steering Committee). There were four repeated measurements of blood lead levels obtained at baseline (or week 0), week 1, week 4, and week 6 on 100 children that were randomly assigned to chelating treatment with succimer or placebo. The missing data on blood lead levels were denoted by "." at weeks 1, 4, and 6. <!-- However, they were set to missing under a missing at random (MAR) process.  -->
+Blood lead level was measured in micrograms/dL, time was measured in weeks (0, 1, 4, and 6), treatment groups has two categories (0=placebo and 1=succimer), and child ID is from 1 to 100. Thus, there were 100 children and 400 observations in all with 57 missing values. 
+
+
+## Proposed Analysis:
+For descriptive data analysis, mean and variances of the blood lead level will be considered at each time. This will be supported with visuals using the time plot and spaghetti plot. Interaction plot will show if there is a similar pattern of mean blood lead level between treatment groups using time and treatment group as the two classifications. The residual scatter plot matrix will be generated to observe the presence of auto-correlation among subject's mean blood level across time. This is to check if there is a correlation between data points separated by different time lags to investigate non-independence in the data.  
+
+Inferential analysis involves fitting the random intercept model checking if it is a good fit. We check by observing the significance of the independent variables from the Analysis of Variance Table with Satterthwaite’s method, plotting the residuals versus predicted values to observe the overall variation in the model - this is good for visuals, testing for normality using the normal quantile-quantile plot and Shapiro-Wilk’s normality test, and investigating the auto-correlation using variogram or correlation analysis to check non-independence in the data. So, if the model suggests a good fit, then we can trust the result it gives. We observe if the independent variables are statistically significant and use their estimates (the $\beta's$) for specific interpretations.
+
+Thus, an appropriate conditional longitudinal random intercept model is:
+
+$$
+BLL_{it}=\beta_0+u_{0i}+\beta_t\cdot Time+ \beta_2(TrtGroup)_i+\beta_3(TrtGroup)\times Time+\epsilon_{it}
+$$
+\[
+i = 1,2,\dots 100, ~~~~~~~t = 1,2,3,4
+\]
+
+\newpage
+where,
+
+\[
+\begin{split}
+BLL_{it} &= \text{responses for blood lead levels of each } i \text{th subject (child) during week } t \\
+\beta_0 &= \text{baseline expected blood lead level }\\
+u_{0i} &= \text{fluctuation of the baseline blood lead level among the population of children }  \\  
+\beta_{t} &= \text{effect of each level of time on expected blood lead level } \\
+\beta_2 &= \text{adjustments to the baseline expected blood lead level for the succimer treatment group}\\
+TrtGroup_{i} &= \text{indicator of whether child } i \text{ is in the succimer treatment group}\\
+\beta_3 &= \text{adjustments to the time effect for the treatment group }\\
+TrtGroup_{i} \times Time &= \text{adjustments to time effects to succimer treatment group}  \\
+\epsilon_{it} &= \text{ random error term }.
+\end{split}
+\]
+
+## Analysis Results:
+```{r, include=FALSE,warning=FALSE,out.width='70%'}
+# R PROJECT 2: CONDITIONAL MODELING OF LONGITUDINAL DATA #
+
+
+## MODEL EXPECTED BLOOD LEAD LEVELS BY TREATMENT GROUP AND TIME 	##
+## BLOOD LEAD LEVEL (micrograms/dL) ##
+## TREATMENT GROUP (0=Placebo, 1=Succimer)  ##
+## TIME (WEEKS) ##
+## ID (1-100) ##
+
+
+setwd("/Users/agboo/OneDrive - University of Northern Colorado/Spring 2020/Longitudinal/Dataset")
+
+
+BLData = read.table("C:\\Users\\agboo\\OneDrive - University of Northern Colorado\\Spring 2020\\Longitudinal\\Dataset\\LeadExposedChildren.txt",header=FALSE)
+colnames(BLData) = c("ChildID","TreatGroup","Week0","Week1","Week4","Week6")
+
+
+BLD.long=reshape(BLData,direction="long",varying=3:6, sep="") #To convert the data from wide to long format
+BLD.long$Blood.LL=ifelse(BLD.long$Week==".","NA",BLD.long$Week) #naming missing values
+
+BLD.long$TreatGroup=as.factor(BLD.long$TreatGroup)
+#BLD.long$time=as.factor(BLD.long$time)
+BLD.long$Blood.LL=as.numeric(BLD.long$Blood.LL)
+
+
+BLD.L=BLD.long[,c(1,2,3,6)] #selecting the required columns
+BLL<-BLD.L[-319,] #to remove the outlier 63.9dL
+mBLL<-na.omit(BLL)
+
+attach(BLL)
+
+
+library(lme4)
+library(lmerTest)
+library(ggplot2)
+library(joineR)
+library(s20x)
+
+
+## DESCRIPTIVES AND PLOTS ##
+
+## SPAGHETTI PLOT ##
+interaction.plot(x.factor=as.factor(BLL$time),trace.factor=as.factor(BLL$ChildID),response=BLL$Blood.LL,fun=function(x)mean(x,na.rm=TRUE))
+
+
+## INTERACTION PLOT ##
+interaction.plot(x.factor=as.factor(BLL$time),trace.factor=as.factor(BLL$TreatGroup),response=BLL$Blood.LL,fun=function(x)mean(x,na.rm=TRUE))
+
+
+## MEANS AND VARIANCES BY TIME ##
+aggregate(Blood.LL~time,data=BLL,FUN=function(x)mean(x,na.rm=TRUE))
+aggregate(Blood.LL~time,data=BLL,FUN=function(x)var(x,na.rm=TRUE))
+
+
+## MEANS AND VARIANCES BY TREATMENT GROUP AND TIME ##
+aggregate(Blood.LL~TreatGroup+time,data=BLL,FUN=function(x)mean(x,na.rm=TRUE))
+aggregate(Blood.LL~TreatGroup+time,data=BLL,FUN=function(x)var(x,na.rm=TRUE))
+
+# WITH MISSING VALUES #
+BLL_matrix = matrix(0,length(unique(ChildID)),length(unique(time)))
+for(i in 1:nrow(BLL_matrix)){
+	for(j in 1:ncol(BLL_matrix)){
+		if(unique(time)[j] %in% time[ChildID==unique(ChildID)[i]]){BLL_matrix[i,j]=Blood.LL[((ChildID==unique(ChildID)[i])&(time==unique(time)[j]))]}
+		else{BLL_matrix[i,j]=NA}
+}}
+
+
+
+
+## SCATTERPLOT MATRIX ##
+# REMOVE RELEVANT NA'S, TO HELP WITH RESIDUAL PLOTS #
+library(s20x)
+library(dafs)
+BLL_new <- BLL[complete.cases(BLL),]
+
+
+## LINEAR MODEL ##
+residuals = lm(Blood.LL~TreatGroup+time,data=BLL_new)$residuals
+residualData = data.frame(residuals=residuals,time=BLL_new$time,ID=BLL_new$ChildID)
+
+rDataWide = reshape(residualData,timevar="time",idvar="ID",direction="wide")
+
+## CONDITIONAL LONGITUDINAL MODELS ##
+
+# RANDOM INTERCEPT MODEL #
+RIModel = lmer(Blood.LL~as.factor(TreatGroup)+as.factor(time)+as.factor(TreatGroup)*as.factor(time)+(1|ChildID),data=BLL,REML=TRUE)
+
+#AIC(RIModel)
+#BIC(RIModel)
+
+## LIKELIHOOD RATIO TESTS: BASED ON ML, MODELS ARE RE-FIT ##
+anova(RIModel)
+
+
+## RESIDUAL DIAGNOSTICS ##
+# RANDOM INTERCEPT MODEL #
+
+RIResid = residuals(RIModel)
+RIPred = predict(RIModel)
+
+
+## RESIDUALS VERSUS PREDICTED VALUES ##
+qplot(RIPred,RIResid)
+
+## RESIDUALS VERSUS TIME ##
+qplot(mBLL$time,RIResid)
+
+## NORMAL PROBABILITY PLOT AND TEST ##
+qqnorm(RIResid)
+qqline(RIResid)
+
+shapiro.test(RIResid)
+
+
+semiVG = variogram(BLL$ChildID,as.numeric(BLL$time),RIResid)
+plot(semiVG)
+
+
+## FINAL MODEL ##
+summary(RIModel)
+```
+
+Computing the mean blood lead level at each time shows that blood lead level drops after baseline (week 0) and slowly increases at other times. Similarly, the variation in blood lead level first increases after baseline (week 0) and drops afterwards. The time plot shows that blood lead level for the subjects generally reduced after baseline, more of the same at other times with some high blood lead level recorded at week 6. Spaghetti plot shows that most subjects have different blood lead level at the baseline. It gives a visual to what was described after computing the mean. While there is no general trend for all subjects across time; a common trend is experiencing a reduction in blood lead level after baseline and slow increase afterwards.
+
+
+```{r int, warning=FALSE,fig.cap="Interaction Plot", out.width='50%', fig.align='center'}
+## INTERACTION PLOT ##
+with(BLL,{interaction.plot(x.factor = as.factor(time), trace.factor = as.factor(TreatGroup), response = Blood.LL,fun=function(x)mean(x,na.rm=TRUE),xlab='Time', ylab='Blood Lead Level', trace.label = "Trt Grp",type = "b", col=c("blue","red"), pch = c(19,17), fixed = TRUE)})
+```
+
+From the interaction plot in Figure 1, we can make two clear conclusions. First, both groups do not have similar trends of mean blood lead level across time. Though the mean blood lead level for subjects that had succimer and placebo are about the same at the baseline. But the succimer group experienced a sharp drop after basleine (at week 1) and increased till week 6. Whereas the placebo group reduced slowly across time. Second, the values of mean blood lead level appear higher for subjects with placebo than for subjects with succimer treatment.
+
+
+```{r re,fig.align='center',fig.cap="Residual Scatterplots Matrix",out.width='50%'}
+pairs20x(rDataWide[,-1])
+```
+
+The residual scatterplots matrix was explored (see Figure 2) since there are only four times. It shows fairly strong associations between residuals at different times, with the association first increasing then diminishing somewhat from time lags of one time to time lags of two times. It can be concluded that there is non-independence in the data.
+
+The output of the fitted model is:
+
+Fixed effects | Estimate |  t value | P value  
+------------|-----| ----- | -------
+Intercept | $26.2720$ | $30.645$ | $2 \times 10^{-16}$ 
+Treatment Group 1 | $0.2680$ | $0.221$ | $0.825329$
+Week 1 | $-1.6319$ | $-2.164$ | $0.031507$
+Week 4 | $-2.2321$ | $-2.939$ | $0.003626$
+Week 6 | $-2.5475$ | $-3.402$ | $0.000785$
+Treatment Group 1:Week 1  | $-11.3990$ | $-10.402$ | $< 0.0001$
+Treatment Group 1:Week 4 | $-8.9209$ | $-7.869$ | $< 0.0001$
+Treatment Group 1:Week 6 | $-5.1136$ | $-4.214$ | $0.0000354$
+
+Observe that all predictors except Treatment Group 1 are statistically significant at $5\%$ significance level.
+
+Residuals will be used to check model appropriateness through visuals. A plot with an observable pattern implies the model represented by that plot is not appropriate. See Appendix for the plots. It was observed that the residual plots showed no observable pattern and had a constant variation.
+
+By checking normalilty assumption, the normal Q-Q plot in Figure 3 looks relatively straight, but slightly skewed at the tails, possibly due to presence of outliers. The Shapiro-Wilk normality test show small p-value ($< 0.0001$), suggesting we reject the assumption of normality. But the plot looks okay to go on with the model.
+
+```{r, n, fig.cap="Q-Q Plot", fig.align='center',out.width='50%', warning=FALSE}
+## NORMAL PROBABILITY PLOT AND TEST ##
+qqnorm(RIResid)
+qqline(RIResid)
+```
+
+\newpage
+Observe from the variogram in Figure 4 that the model seems to account for the autocorrelation in the data because it has no fluctuation and it is flat. Hence, it has an appropriate covariance structure. 
+
+```{r, out.width='50%',fig.align='center',fig.cap="Variogram"}
+semiVG = variogram(BLL$ChildID,as.numeric(BLL$time),RIResid)
+plot(semiVG)
+```
+
+
+Based on the combination of residual plots and variograms; the model appears to be appropriate for the data. Though the model deviates from normality, its covariance structure is acceptable. Thus, the overall model is appropriate. 
+
+
+
+<!-- Thus, we reject the null to conclude that the data provide sufficient evidence that the pattern of mean blood lead level over time differs between subjects that had succimer and subjects that had placebo. This was also observed in the interaction plot. -->
+
+<!-- Thus, we reject the null to conclude that the data provide sufficient evidence that the mean blood lead level differs across times of observation. -->
+
+<!-- Thus, we reject the null to conclude that the data provide sufficient evidence that the mean blood lead level differs between subjects with succimer and subjects with placebo. -->
+
+
+<!-- In summary, it appears subjects given succimer and subjects given placebo show differences in typical blood lead level. All children show differences in typical blood lead level over time. There is evidence that this change over time differs between subjects given succimer and subjects given placebo. -->
+
+
+
+
+
+
+<!-- \begin{tabu} to 0.8\textwidth { | X[l] | X[c] | X[r] | } -->
+<!--  \hline -->
+<!--  Variable & Estimate & P-value \\ -->
+<!--  \hline -->
+<!--  Treatment Group 1  & -5.79  & <0.001  \\ -->
+<!-- \hline -->
+<!--  Week 1  & -7.10  & <0.001  \\ -->
+<!-- \hline -->
+<!--  Week 4  & -6.45  & <0.001  \\ -->
+<!-- \hline -->
+<!--  Week 6  & -5.29  & <0.001  \\ -->
+<!-- \hline -->
+<!-- \end{tabu} -->
+
+
+## Conclusions:
+Here, interpretations are made. Recall, the purpose of the analysis is to determine whether blood lead levels differ for succimer patients, whether there are changes over time, and whether the changes in time differed between groups. 
+
+The data failed to provide evidence of difference in baseline blood lead levels across succimer patients. Hence, blood lead levels do not appear to differ for succimer patients. Since the interaction between treatment group and time is included, this represents the changes in time between the treatment groups. So, expected changes in blood lead levels over time decreases for children in succimer treatment group. This implies that the expected changes in blood lead level over time is lower by $10.402, 7.869$, and $4.124$ after weeks 1, 4 and 6 respectively, for the children in succimer treatment group than the children in placebo treatment group. 
+
+Expected blood lead levels decreases for children after weeks 1, 4 and 6. Over one week, four weeks, and six weeks expect the average blood lead levels of children to decrease by $2.164$, $2.939$, and $3.402$ for each child. 
+
+
+
+\newpage
+## Appendix
+```{r, c, echo=TRUE, warning=FALSE,out.width='70%'}
+## MEANS AND VARIANCES BY TIME ##
+aggregate(Blood.LL~time,FUN=function(x)mean(x,na.rm=TRUE))
+aggregate(Blood.LL~time,FUN=function(x)var(x,na.rm=TRUE))
+
+cov(BLL_matrix,use="complete.obs")
+cor(BLL_matrix,use="complete.obs")
+
+# BETTER TIME PLOT #
+p1<- ggplot(BLL, aes(x=time,y=Blood.LL)) +
+	geom_point(col='grey45') + 
+	geom_smooth(col='grey45') +
+	ggtitle("Time Plot of Blood Lead Level Versus Time") + 
+	xlab("Time") + 
+	ylab("Blood Lead Level") +
+	theme(axis.text=element_text(size=16), axis.title=element_text(size=20), plot.title=element_text(size=24))
+
+
+library(gridExtra)
+library(grid)
+library(ggplot2)
+library(lattice)
+
+## SPAGHETTI PLOT ##
+p2 <- ggplot(data = BLL, aes(x = time,y=Blood.LL, group = ChildID)) + geom_line()+xlab("Time") + 
+  ylab("Blood Lead Level")
+
+grid.arrange(p1, p2, nrow = 2)
+
+## RESIDUALS VERSUS PREDICTED VALUES ##
+qplot(RIPred,RIResid)
+
+## RESIDUALS VERSUS TIME ##
+qplot(mBLL$time,RIResid)
+
+shapiro.test(RIResid)
+```
