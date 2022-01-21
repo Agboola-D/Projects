@@ -1,0 +1,232 @@
+---
+title: "Predicting average number of bikes rented daily in D.C: Comparing a Frequentist and Bayesian method"
+author: "David O. Agboola"
+date: "December 5, 2019"
+output: beamer_presentation
+   
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Introduction
+- Bike sharing systems are getting popular and becoming a new generation of traditional bike rentals.
+
+- The whole process from membership, rental and return has become automated.
+
+- Currently, there are about over 500 bike-sharing programs around the world which is composed of over 500 thousand bicycles.
+
+## Purpose of the Analysis
+- To obtain parameter estimates for predicting the average number of bikes rented daily in DC using Bayesian method. (RJAGS)
+
+- To apply informative priors and non-informative priors on the paramters and compare the estimates.
+
+- To compare parameter estimates from Bayesian' approach with parameter estimates from Frequentist's approach.
+
+## Description of the Data
+- ``Bike-Sharing-Dataset'' was collected by the Laboratory of Artificial Intelligence and Decision Support (LIAAD), University of Porto which contains the daily count of rental bikes for the years 2011 and 2012 from Capital Bikeshare system, Washington D.C., USA .
+
+- 731 observations, 16 variables.
+
+- The predictors of interest are: holiday, weather situation, feeling temperature, humidity, and wind-speed.
+
+- The response variable is total number of bikes.
+
+
+## Description of the Data
+- Data type of weather situation is integer where:
+1 represents "cool weather" – clear and few clouds
+2 represents "not so cool weather" – fog, mist, and partly cloudy
+3 represents "not cool weather" – snow, ice pallets, rain, and thunderstorm.
+
+- Data type of holiday is integer (extracted from http://dchr.dc.gov/page/holiday-schedule) where:
+0 represents "no holiday"
+1 represents "holiday". 
+
+- Data type of feeling temperature, humidity, and wind-speed is number measured in Celsius, percentage, and m/sec respectively.
+
+- Data type of count is integer representing count of total rental bikes.
+
+
+## Analysis
+- BAYESIAN APPROACH (INFORMATIVE PRIORS)
+
+- Using RJAGS, setting uniform distribution prior on the intercept and independent normal distribution priors (Jackman, 2012) on the predictors.
+
+Iterations = 11100:111000 (100,000)
+
+Thinning interval = 100 
+
+Number of chains = 3 
+
+Sample size per chain = 1000 
+
+
+## Analysis
+```{r echo=F,fig.cap="Ergodic Mean Plot",out.width="70%"}
+knitr::include_graphics("Pergodic1.png",dpi = 20)
+```
+
+## Analysis
+```{r echo=F,fig.cap="Ergodic Mean Plot",out.width="70%"}
+knitr::include_graphics("Pergodic2.png",dpi = 20)
+```
+
+## Analysis
+```{r echo=F,fig.cap="Trace Plot",out.width="90%"}
+knitr::include_graphics("TraceplotP.png",dpi = 20)
+```
+
+## Analysis
+```{r echo=F,fig.cap="Trace Plot",out.width="90%"}
+knitr::include_graphics("TraceplotP2.png",dpi = 20)
+```
+
+## Analysis
+-  Fitting the Negative Binomial Regression Model gives:
+
+Parameters   | Estimates     |  MC Error
+-------------| ------------- | -------------
+Intercept    | $7.96805$      | $0.002371$
+Weathersit1  | $-0.69965$     | $0.001781$
+Weathersit2  | $-0.06421$       | $0.0006939$
+Holiday      | $-0.19743$       | $0.001584$
+TEMPfel      | $0.03902$       | $$ 3.366 \times 10^{-5}$$
+Humid        | $-0.00496$       | $$ 3.011 \times 10^{-5}$$
+Windspeed    | $-0.01397$       | $$5.694 \times 10^{-5}$$.
+
+## Analysis
+-  $95\%$ HDP Credible Interval:
+
+Parameters   | lower         |  upper
+-------------| ------------- | -------------
+Intercept    | $7.775$       | $8.170$
+Weathersit1  | $-0.882$      | $-0.514$
+Weathersit2  | $-0.138$      | $0.00246$
+Holiday      | $-0.359$      | $-0.0211$
+TEMPfel      | $0.0353$      | $0.0431$
+Humid        | $-0.00776$    | $-0.00235$
+Windspeed    | $-0.0192$     | $-0.00796$.
+
+
+## Analysis
+- The fitted Negative Binomial Regression model is:
+\[
+\ln\mu_i=7.9681-0.6997\cdot weathersit1 -0.0642\cdot weathersit2 -0.1974 \cdot holiday + 0.0390 \cdot TEMPfel -0.00496 \cdot Humidity -0.01397 \cdot Windspeed.
+\]
+
+## Analysis
+- BAYESIAN APPROACH (NON-INFORMATIVE PRIORS)
+
+- Using RJAGS, setting uniform distribution priors on all parameters.
+
+Iterations = 11100:111000 (100,000)
+
+Thinning interval = 100 
+
+Number of chains = 3 
+
+Sample size per chain = 1000 
+
+
+## Analysis
+```{r echo=F,fig.cap="Ergodic Mean Plot",out.width="70%"}
+knitr::include_graphics("ErgodicPN.png",dpi = 20)
+```
+
+## Analysis
+```{r echo=F,fig.cap="Ergodic Mean Plot",out.width="70%"}
+knitr::include_graphics("ErgodicPN2.png",dpi = 20)
+```
+
+## Analysis
+```{r echo=F,fig.cap="Trace Plot",out.width="90%"}
+knitr::include_graphics("TraceplotPN.png",dpi = 20)
+```
+
+## Analysis
+```{r echo=F,fig.cap="Trace Plot",out.width="90%"}
+knitr::include_graphics("TraceplotPN2.png",dpi = 20)
+```
+
+## Analysis
+-  Fitting the Negative Binomial Regression Model gives:
+
+Parameters   | Estimates     |  MC Error
+-------------| ------------- | -------------
+Intercept    | $7.96633$      | $0.002342$
+Weathersit1  | $-0.69834$     | $0.001801$
+Weathersit2  | $-0.06318$       | $0.0007767$
+Holiday      | $-0.19871$       | $0.001548$
+TEMPfel      | $0.03909$       | $$ 3.780 \times 10^{-5}$$
+Humid        | $-0.00497$       | $$ 3.011 \times 10^{-5}$$
+Windspeed    | $-0.01392$       | $$5.473 \times 10^{-5}$$.
+
+## Analysis
+-  $95\%$ HDP Credible Interval:
+
+Parameters   | lower         |  upper
+-------------| ------------- | -------------
+Intercept    | $7.76483$       | $8.15958$
+Weathersit1  | $-0.89332$      | $-0.51332$
+Weathersit2  | $-0.13009$      | $0.011170$
+Holiday      | $-0.36670$      | $-0.03688$
+TEMPfel      | $0.03534$      | $0.04301$
+Humid        | $-0.00752$    | $-0.00226$
+Windspeed    | $-0.01975$     | $-0.00840$.
+
+
+## Analysis
+- FREQUENTIST APPROACH
+
+- The GLM.NB function in R was applied to the data manipulated and prepared from above to have:
+
+- The fitted Negative Binomial Regression model is:
+
+\begin{align*}
+\ln\mu_i&=7.966-0.702\cdot weathersit1-0.065\cdot weathersit2 -0.203 \cdot holiday\\
+&+ 0.039 \cdot TEMPfel -0.005 \cdot Humidity -0.0139 \cdot Windspeed.
+\end{align*}
+
+## Analysis
+ Parameters   | Estimates     |  P-value
+-------------| ------------- | -------------
+Intercept    | $7.965970$      | 
+Weathersit1  | $-0.702418$     | $$ 8.38 \times 10^{-14}$$
+Weathersit2  | $-0.064645$       | $0.077904$
+Holiday      | $-0.202619$       | $0.014626$
+TEMPfel      | $0.039022$       | $$ < 2 \times 10^{-16}$$
+Humid        | $-0.004945$       | $0.000166$
+Windspeed    | $-0.013928$       | $$1.17\times 10^{-6}$$.
+
+
+## Results
+COMPARISON OF RESULTS
+
+ Parameters   | Estimates (F)    | Estimates (NIP)            | Estimates (IP)
+-------------| ------------- | -------------            |------------------
+Intercept    | $7.965970$      | $7.96633$              | $7.96805$ 
+Weathersit1  | $-0.702418$     | $-0.69834$                  | $-0.69965$ 
+Weathersit2  | $-0.064645$       | $-0.06318$                | $-0.06421$ 
+Holiday      | $-0.202619$       | $-0.19871$               | $-0.19743$
+TEMPfel      | $0.039022$       | $0.03909$                 | $0.03902$ 
+Humid        | $-0.004945$       | $-0.00497$               | $-0.00496$ 
+Windspeed    | $-0.013928$       | $-0.01392$              | $-0.01397$
+
+
+## Conclusion and Recommendation
+- Using non-informative priors, informative priors and frequentist approach gave similar parameter estimates and $95\%$ HPD credible intervals.
+
+- Convergence was checked using ergodic mean plot, trace plot, and MC errors (time-series error)
+
+- I relied on assumptions from the frequentist approach.
+ 
+ 
+# Thank you for listening
+
+
+# Questions?
+
+
