@@ -1,0 +1,4 @@
+
+Simulation_SNPsANs_Latinx.Rmd contains the simulation for observing the uncertainty in reference allele numbers, 2N, using American/Latinx GnomAD data for 1000 and 10000SNPs. Number of people (N), was fixed for the five ancestry groups (i.e., African, European, East Asian, South Asian, and Indigenous American) considering N = {5, 10, 15, 20, 25, 50, 100, 500, and 1000}. Plots were generated for ancestry proportion estimates, difference in simulated and observed allele frequencies, and least squares value for each N and SNP. Variability between simulated and observed allele frequencies were plotted against 1/N and 1/N^2.
+
+Simulation_SNPsANs_Latinx.html is the knitted Simulation_SNPsANs_Latinx.Rmd which contains all the outputs.
