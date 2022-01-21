@@ -145,7 +145,7 @@ simm <- foreach(sim.no=sim.start:sim.end)%do%{
     
     #-------Libraries for the different clusters------------------------------------
     
-    library(randomForest);library(SPlit);library(glmnet);library(DoubleML);library(hdm)
+    library(randomForest);library(glmnet);library(DoubleML);library(hdm)
     library(mlr3learners);library(dplyr);library(ranger);library(mlr3);library(mvtnorm)
     #-------------------------------------------------------------------------------
     ACT_r <- ACT(500,5000,1.5,0.8)
