@@ -1,0 +1,180 @@
+rm(list = ls()) # clear environment 
+
+# Load required libraries 
+
+library(stats)
+library(hdm)
+library(mvtnorm)
+library(randomForest)
+library(glmnet)
+library(data.table)
+library(DoubleML)
+library(mlr3)
+library(mlr3learners)
+library(dplyr)
+library(ranger)
+library(foreach)
+library(doParallel)
+
+
+## Load super function in Global Environment ##
+ACT <- function(n_obs, dim_X, beta, R2_d, R2_y) {
+  
+  ## Data Generation ##
+  PLROS <- function(n_obs, dim_X, beta, R2_d, R2_y) 
+  {
+    cov_mat = toeplitz(0.9^(0:(dim_X - 1))) # Toeplitz
+    b_a = 0.5
+    b_y = 1
+    g=4; gc = dim_X - 2*4
+    gamma_0 = c(rep(c(0,1,0), times=c(g,g,gc))) # sparse
+    #gamma_0 = c(1 / sqrt(1:dim_X)) dense
+    s = 4; sc = dim_X - s
+    eta_0 = c(rep(c(1,0),times=c(s,sc))) # sparse
+    #eta_0 = c(rep(c(5,1,0),times=c(10,10,480))) mod sparse
+    #eta_0 = c(1 / sqrt(1:dim_X)) dense
+    eps = rnorm(n_obs)
+    nu = rnorm(n_obs)
+    e_sigma_e = eta_0 %*% cov_mat %*% eta_0
+    c_y = c(sqrt(R2_y / ((1 - R2_y) * e_sigma_e)))
+    c_d = c(sqrt((pi^2 * R2_d / 3) / ((1 - R2_d) * e_sigma_e)))
+    gamma = c(c_d * gamma_0)
+    eta = c(c_y * eta_0)
+    X = rmvnorm(n = n_obs, mean = rep(0, dim_X), sigma = cov_mat)
+    A = as.matrix(b_a + X %*% gamma + nu)
+    Y = as.matrix(b_y + beta * A + X %*% eta + eps)
+    colnames(X) = paste0("X", 1:dim_X)
+    colnames(Y) = "Y"
+    data = data.frame(Y, A, X)
+    return(data)
+  }
+  # Gamma - sparse, eta - sparse 
+  df <- PLROS(n_obs = 500, dim_X = 10000, beta = 1.5, R2_y = 0.8, R2_d = 0.5)
+  
+  N = c(dim(df)[1])
+  X = df[,3:10002]
+  A = df[,2]
+  Y = df[,1]
+  thetahat <- matrix(NA,1,6)
+  colnames(thetahat) <- c("Double","Double_2CV","R-Split","Time_R")
+  
+  ## Double ##
+  ### rLasso ###
+  double_func <- function(arg_x, arg_y, arg_a) {
+    # Double #
+    ## Inputs: X, Y, A ##
+    DS <- rlassoEffect(as.matrix(arg_x), arg_y, arg_a)
+    return(summary(DS)$coefficients[1])
+  }
+  
+  thetahat[,1] <- double_func(X, Y, A)
+  
+  ## Double-2CV ##
+  ### rLasso ###
+  double_2cv_rlasso_func <- function(arg_df) {
+    
+    ml_g <- lrn("regr.cv_glmnet", s = "lambda.min")
+    ml_m <- ml_g$clone()
+    dfo <- double_ml_data_from_data_frame(
+      arg_df,
+      x_cols = NULL,
+      y_col = "Y",
+      d_cols = "A",
+      z_cols = NULL,
+      cluster_cols = NULL,
+      use_other_treat_as_covariate = FALSE
+    )
+    
+    dml_plr_obj = DoubleMLPLR$new(dfo, ml_g, ml_m, n_folds = 2)
+    dml_plr_obj$fit()
+    return(dml_plr_obj$coef)
+  }
+  
+  thetahat[,2] <- double_2cv_rlasso_func(df)
+  
+  # R-Split #
+  ## rlasso #
+  r_split_func <- function(arg_df) {
+    start_time = Sys.time()
+    ml_g <- lrn("regr.cv_glmnet", s = "lambda.min")
+    ml_m <- ml_g$clone()
+    dfr <- double_ml_data_from_data_frame(
+      arg_df,
+      x_cols = NULL,
+      y_col = "Y",
+      d_cols = "A",
+      z_cols = NULL,
+      cluster_cols = NULL,
+      use_other_treat_as_covariate = FALSE
+    )
+    
+    dml_plr_obj = DoubleMLPLR$new(dfr, ml_g, ml_m, n_folds = 2, n_rep = 1000)
+    dml_plr_obj$fit()
+    #CI[i,,5] <- dml_plr_obj$confint("A")
+    end_time = Sys.time() # > 20.3741 mins
+    tot_time <- (end_time - start_time) * 60
+    ret_array <- matrix(NA, 1, 2)
+    ret_array[1, 1] <- mean(dml_plr_obj$all_coef)
+    ret_array[1, 2] <- tot_time
+    return(ret_array)
+  }
+  
+  thetahat[,3:4] <- r_split_func(df)
+ 
+}
+
+Be = 1.5
+
+#------------------------- Parallelization ------------------------------------
+
+library(foreach);library(doSNOW);library(parallel); library(rlist)
+
+
+NumberOfCluster<-detectCores() - 1 # -1 ' This is used because the number of cores is 48 
+cl <- makeCluster(NumberOfCluster) #' Sets up clusters for parallel computing
+registerDoSNOW(cl) #' Registers the clusters created
+
+
+sim.start <- 1; sim.end <- 11
+
+
+
+sttime<-proc.time()
+simm <- foreach(sim.no=sim.start:sim.end)%do%{
+  
+  est.result=foreach(k=1:NumberOfCluster,.combine = 'rbind')%dopar%{
+    
+    #-------Libraries for the different clusters------------------------------------
+    
+    library(randomForest);library(glmnet);library(DoubleML);library(hdm)
+    library(mlr3learners);library(dplyr);library(ranger);library(mlr3);library(mvtnorm)
+    #-------------------------------------------------------------------------------
+    ACT_r <- ACT(500,10000,1.5,0.8,0.5)
+    
+    return(ACT_r)
+  }
+  
+}
+
+
+stopCluster(cl)
+
+est <- list.rbind(simm)
+
+out <- apply(list.rbind(simm)[complete.cases(list.rbind(simm)),], 2,mean)
+out <- t(as.data.frame(out))
+rownames(out) <- "Est"
+
+V <- as.data.frame(est) %>% summarise_if(is.numeric, var) # get the variance for theta for all models #
+rownames(V) <- "Var"
+
+B <- Be - out
+colnames(B) <- c("Double","Double_2CV","R-Split","Time_R")
+rownames(B) <- "Bias"
+
+MeSqE <- as.data.frame(c(V + B^2))
+rownames(MeSqE) <- c("MSE")
+colnames(MeSqE) <- c("Double","Double_2CV","R-Split","Time_R")
+
+FinalOut <- rbind(out, V, MeSqE,B) # combine all measures 
+write.csv(FinalOut, "FinalOut.csv")
