@@ -1,0 +1,100 @@
+# R PROJECT 2: CONDITIONAL MODELING OF LONGITUDINAL DATA #
+
+
+## MODEL EXPECTED BLOOD LEAD LEVELS BY TREATMENT GROUP AND TIME 	##
+## BLOOD LEAD LEVEL (micrograms/dL) ##
+## TREATMENT GROUP (0=Placebo, 1=Succimer)  ##
+## TIME (WEEKS) ##
+## ID (1-100) ##
+
+
+setwd("C:\\Users\\agboo\\OneDrive - University of Northern Colorado\\Spring 2019\\SRM 611\\data")
+
+
+BLData = read.table('LeadExposedChildren.txt',header=FALSE)
+colnames(BLData) = c("ChildID","TreatGroup","Week0","Week1","Week4","Week6")
+
+
+BLD.long=reshape(BLData,direction="long",varying=3:6, sep="") #To convert the data from wide to long format
+BLD.long$Blood.LL=ifelse(BLD.long$Week==".","NA",BLD.long$Week) #naming missing values
+
+BLD.long$TreatGroup=as.factor(BLD.long$TreatGroup)
+BLD.long$time=as.factor(BLD.long$time)
+BLD.long$Blood.LL=as.numeric(BLD.long$Blood.LL)
+
+
+BLD.L=BLD.long[,c(1,2,3,6)] #selecting the required columns
+BLL<-BLD.L[-319,] #to remove the outlier 63.9dL
+
+attach(BLL)
+
+
+library(lme4)
+library(lmerTest)
+library(ggplot2)
+library(joineR)
+library(s20x)
+
+
+## DESCRIPTIVES AND PLOTS ##
+
+## SPAGHETTI PLOT ##
+interaction.plot(x.factor=as.factor(BLL$time),trace.factor=as.factor(BLL$ChildID),response=BLL$Blood.LL,fun=function(x)mean(x,na.rm=TRUE))
+
+
+## INTERACTION PLOT ##
+interaction.plot(x.factor=as.factor(BLL$time),trace.factor=as.factor(BLL$TreatGroup),response=BLL$Blood.LL,fun=function(x)mean(x,na.rm=TRUE))
+
+
+## VARIOGRAM ##
+residuals = lm(Blood.LL~TreatGroup,data=BLL)$residuals
+ChildVG = variogram(BLL$ChildID,as.numeric(BLL$time),residuals)
+plot(ChildVG)
+
+
+## MEANS AND VARIANCES BY TIME ##
+aggregate(Blood.LL~time,data=BLL,FUN=function(x)mean(x,na.rm=TRUE))
+aggregate(Blood.LL~time,data=BLL,FUN=function(x)var(x,na.rm=TRUE))
+
+
+## MEANS AND VARIANCES BY TREATMENT GROUP AND TIME ##
+aggregate(Blood.LL~TreatGroup+time,data=BLL,FUN=function(x)mean(x,na.rm=TRUE))
+aggregate(Blood.LL~TreatGroup+time,data=BLL,FUN=function(x)var(x,na.rm=TRUE))
+
+
+
+## CONDITIONAL LONGITUDINAL MODELS ##
+
+# RANDOM INTERCEPT MODEL #
+RIModel = lmer(Blood.LL~as.factor(TreatGroup)+as.factor(time)+(1|ChildID),data=BB,REML=TRUE)
+
+
+#AIC(RIModel)
+#BIC(RIModel)
+
+## LIKELIHOOD RATIO TESTS: BASED ON ML, MODELS ARE RE-FIT ##
+anova(RIModel)
+
+
+## RESIDUAL DIAGNOSTICS ##
+# RANDOM INTERCEPT MODEL #
+
+RIResid = residuals(RIModel)
+RIPred = predict(RIModel)
+
+## RESIDUALS VERSUS PREDICTED VALUES ##
+qplot(RIPred,RIResid)
+
+## NORMAL PROBABILITY PLOT AND TEST ##
+qqnorm(RIResid)
+qqline(RIResid)
+
+shapiro.test(RIResid)
+
+
+semiVG = variogram(BLL$ChildID,as.numeric(BLL$time),RIResid)
+plot(semiVG)
+
+
+## FINAL MODEL ##
+summary(RIModel)
